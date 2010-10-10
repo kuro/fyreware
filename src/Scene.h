@@ -25,6 +25,9 @@ private:
 
     void drawSpectrum ();
 
+    void showEvent (QShowEvent* evt);
+    void closeEvent (QHideEvent* evt);
+
 private slots:
     void on_timer_timeout ();
 

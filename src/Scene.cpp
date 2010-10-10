@@ -10,6 +10,7 @@
 
 #include <QTimer>
 #include <QCoreApplication>
+#include <QSettings>
 #include <QDebug>
 
 #include <QtFMOD/System.h>
@@ -42,6 +43,8 @@
 
 struct Scene::Private
 {
+    QSettings* settings;
+
     QTimer* timer;
     QtFMOD::System* fsys;
 
@@ -55,6 +58,7 @@ struct Scene::Private
 
 
     Private (Scene* q) :
+        settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
         spectrumLength(128),
@@ -88,6 +92,31 @@ Scene::Scene (QWidget* parent) :
 
 Scene::~Scene ()
 {
+}
+
+void Scene::showEvent (QShowEvent* evt)
+{
+    Q_UNUSED(evt);
+
+    resize(d->settings->value("scene/size", QSize(600, 400)).toSize());
+    if (d->settings->contains("scene/pos")) {
+        move(d->settings->value("scene/pos").toPoint());
+    }
+
+    if (d->settings->value("scene/isFullScreen", false).toBool()) {
+        setWindowState(Qt::WindowFullScreen);
+    }
+}
+
+void Scene::closeEvent (QHideEvent* evt)
+{
+    Q_UNUSED(evt);
+    if (isFullScreen()) {
+        d->settings->setValue("scene/isFullScreen", true);
+    } else {
+        d->settings->setValue("scene/size", size());
+        d->settings->setValue("scene/pos", pos());
+    }
 }
 
 void Scene::initializeGL ()
