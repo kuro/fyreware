@@ -78,7 +78,7 @@ struct Scene::Private
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
         spectrumLength(128),
-        spectrumWindowType(FMOD_DSP_FFT_WINDOW_HAMMING)
+        spectrumWindowType(FMOD_DSP_FFT_WINDOW_RECT)
     {
         timer->setObjectName("timer");
         fsys->setObjectName("fsys");
