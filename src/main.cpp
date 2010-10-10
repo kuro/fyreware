@@ -23,12 +23,47 @@
 
 #include <QApplication>
 
+#include <QImage>
+#include <QPainter>
+#include <QIcon>
+
+static
+QIcon makeFireIcon ()
+{
+    QSize size (64, 64);
+
+    QImage img (size, QImage::Format_ARGB32);
+    img.fill(0);
+
+    QPainter painter;
+
+    painter.begin(&img);
+
+    QFont font (painter.font());
+    font.setPixelSize(64);
+    painter.setFont(font);
+
+    QPen brush (painter.pen());
+    brush.setColor(QColor(0xE2, 0x58, 0x22));  // Flame
+    painter.setPen(brush);
+
+    painter.drawText(QRect(QPoint(0, 0), size),
+                     Qt::AlignCenter,
+                     QString::fromLocal8Bit("火"));
+
+    painter.end();
+
+    return QPixmap::fromImage(img);
+}
+
 int main(int argc, char *argv[])
 {
     QApplication app (argc, argv);
 
     app.setOrganizationName("MentalDistortion");
     app.setApplicationName("FyreWare");
+
+    QApplication::setWindowIcon(makeFireIcon());
 
     Scene scene;
     scene.show();
