@@ -27,6 +27,7 @@
 #include <QCoreApplication>
 #include <QSettings>
 #include <QDebug>
+#include <QIcon>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -189,6 +190,9 @@ void Scene::on_timer_timeout ()
             qDebug().nospace()
                 << qPrintable(tagIter.key()) << ": "
                 << qPrintable(tag.value().toString());
+            if (tag.name() == "APIC") {
+                setWindowIcon(QPixmap::fromImage(tag.toImage()));
+            }
         }
     }
 
