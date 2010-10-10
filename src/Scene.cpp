@@ -124,7 +124,7 @@ void Scene::showEvent (QShowEvent* evt)
     }
 }
 
-void Scene::closeEvent (QHideEvent* evt)
+void Scene::closeEvent (QCloseEvent* evt)
 {
     Q_UNUSED(evt);
     if (isFullScreen()) {
