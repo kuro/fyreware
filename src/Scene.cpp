@@ -33,7 +33,7 @@
 #include <QtFMOD/Channel.h>
 #include <QtFMOD/Sound.h>
 
-#define SPECTRUM_HEIGHT 2
+#define SPECTRUM_HEIGHT 1
 #define SPECTRUM_GENERATIONS 8
 
 #define fsysCheck()                                                         \
@@ -77,7 +77,7 @@ struct Scene::Private
         settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
-        spectrumLength(128),
+        spectrumLength(256),
         spectrumWindowType(FMOD_DSP_FFT_WINDOW_RECT)
     {
         timer->setObjectName("timer");
@@ -210,11 +210,17 @@ void Scene::drawSpectrum ()
 
     d->channel->spectrum(d->spectrumNew[0], 0, d->spectrumWindowType);
     d->channel->spectrum(d->spectrumNew[1], 1, d->spectrumWindowType);
-    for (int i = 0; i < d->spectrumLength; i++) {
-        expMovAvg(d->spectrum[0][i],d->spectrumNew[0][i],SPECTRUM_GENERATIONS);
-        expMovAvg(d->spectrum[1][i],d->spectrumNew[1][i],SPECTRUM_GENERATIONS);
-    }
 
+    for (int i = 0; i < d->spectrumLength; i++) {
+        expMovAvg(d->spectrum[0][i],
+                  d->spectrumNew[0][i],
+                  d->spectrumNew[0][i] > d->spectrum[0][i]
+                  ? 1.5 : SPECTRUM_GENERATIONS);
+        expMovAvg(d->spectrum[1][i],
+                  d->spectrumNew[1][i],
+                  d->spectrumNew[1][i] > d->spectrum[1][i]
+                  ? 1.5 : SPECTRUM_GENERATIONS);
+    }
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();

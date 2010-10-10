@@ -29,9 +29,9 @@
  * @param[in] n number of significant generations for tuning
  */
 template <typename T>
-inline void expMovAvg (T& avg, T new_value, double n)
+inline void expMovAvg (T& avg, T new_value, qreal n)
 {
-    Q_ASSERT(n >= 1);
+    Q_ASSERT(n >= 1.0);
     qreal alpha = 2.0 / (n + 1.0);       // the alpha smoothing factor
     avg = (new_value * alpha) + (avg * (1.0 - alpha));
 }
