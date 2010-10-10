@@ -44,7 +44,7 @@ QIcon makeFireIcon ()
     painter.setFont(font);
 
     QPen brush (painter.pen());
-    brush.setColor(QColor(0xE2, 0x58, 0x22));  // Flame
+    brush.setColor(QColor(0xF4, 0x51, 0x2C));
     painter.setPen(brush);
 
     painter.drawText(QRect(QPoint(0, 0), size),
