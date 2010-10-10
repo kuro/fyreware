@@ -4,10 +4,19 @@
  * @brief main implementation
  */
 
+#include "Scene.h"
+
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication app (argc, argv);
-    return 0;
+    QApplication app (argc, argv);
+
+    app.setOrganizationName("MentalDistortion");
+    app.setApplicationName("FyreWare");
+
+    Scene scene;
+    scene.show();
+
+    return app.exec();
 }

@@ -1,0 +1,3 @@
+[submodule "ext/qtfmod"]
+	path = ext/qtfmod
+	url = git@github.com:kuro/qtfmod.git
