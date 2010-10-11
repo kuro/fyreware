@@ -37,7 +37,9 @@ struct Camera::Private
     btVector3 position;
     btQuaternion orientation;
 
-    Private (Camera* q)
+    Private (Camera* q) :
+        position(0.0, 0.0, 0.0),
+        orientation(btQuaternion::getIdentity())
     {
         Q_UNUSED(q);
     }
@@ -51,6 +53,11 @@ Camera::Camera (QObject* parent) :
 
 Camera::~Camera ()
 {
+}
+
+btQuaternion Camera::orientation () const
+{
+    return d->orientation;
 }
 
 btVector3 Camera::position () const
@@ -94,7 +101,7 @@ void Camera::lookAt (const btVector3& p)
     mat.getRotation(d->orientation);
 }
 
-void Camera::invoke () const
+void Camera::invoke ()
 {
     btTransform xform (d->orientation, d->position);
     xform = xform.inverse();

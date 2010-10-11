@@ -3,6 +3,8 @@ set(source_files
     main.cpp
     Camera.h
     Camera.cpp
+    OrbitalCamera.h
+    OrbitalCamera.cpp
     Scene.h
     Scene.cpp
     ShaderProgram.h

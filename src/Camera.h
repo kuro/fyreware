@@ -24,6 +24,7 @@
 #include <QObject>
 
 struct btVector3;
+struct btQuaternion;
 
 class Camera : public QObject
 {
@@ -32,6 +33,8 @@ class Camera : public QObject
 public:
     Camera (QObject* parent = NULL);
     virtual ~Camera ();
+
+    btQuaternion orientation () const;
 
     btVector3 position () const;
     void setPosition (const btVector3& position);
@@ -42,7 +45,7 @@ public:
 
     void lookAt (const btVector3& p);
 
-    void invoke () const;
+    virtual void invoke ();
 
 private:
     struct Private;

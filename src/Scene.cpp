@@ -24,7 +24,7 @@
 #include "defs.h"
 
 #include "ShaderProgram.h"
-#include "Camera.h"
+#include "OrbitalCamera.h"
 
 #include <QTimer>
 #include <QCoreApplication>
@@ -32,6 +32,7 @@
 #include <QDebug>
 #include <QIcon>
 #include <QDir>
+#include <QWheelEvent>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -80,7 +81,7 @@ struct Scene::Private
 
     GLuint cubeMapTex;
 
-    Camera camera;
+    OrbitalCamera* camera;
 
     ShaderProgram* skyShader;
 
@@ -91,6 +92,7 @@ struct Scene::Private
         spectrumLength(256),
         spectrumWindowType(FMOD_DSP_FFT_WINDOW_RECT),
         cubeMapTex(0),
+        camera(new OrbitalCamera(q)),
         skyShader(new ShaderProgram(q))
     {
         timer->setObjectName("timer");
@@ -171,14 +173,14 @@ void Scene::paintGL ()
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(90.0, qreal(width())/height(), 1.0, 1000.0);
+    d->camera->setMaxDistance(1000.0);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    d->camera.setPosition(btVector3(0, 0, 5));
-    d->camera.lookAt(btVector3(0, 10, 0));
-    d->camera.invoke();
+    d->camera->invoke();
 
+    drawScene();
     drawSky();
     drawSpectrum();
 
@@ -240,8 +242,6 @@ void Scene::drawSpectrum ()
     if (!d->channel->isPlaying()) {
         return;
     }
-
-    glDisable(GL_TEXTURE_CUBE_MAP);
 
     d->channel->spectrum(d->spectrumNew[0], 0, d->spectrumWindowType);
     d->channel->spectrum(d->spectrumNew[1], 1, d->spectrumWindowType);
@@ -379,15 +379,19 @@ void Scene::loadCubeMap (const QDir& path)
  */
 void Scene::drawSky ()
 {
+    glPushAttrib(GL_ENABLE_BIT);
+
     glEnable(GL_TEXTURE_CUBE_MAP);
     glBindTexture(GL_TEXTURE_CUBE_MAP, d->cubeMapTex);
+
+    //glDepthMask(GL_FALSE);
 
     d->skyShader->bind();
 
     glPushMatrix();
-    glTranslated(d->camera.position().x(),
-                 d->camera.position().y(),
-                 d->camera.position().z());
+    glTranslated(d->camera->position().x(),
+                 d->camera->position().y(),
+                 d->camera->position().z());
     static GLuint dlist = 0;
     if (glIsList(dlist)) {
         glCallList(dlist);
@@ -408,4 +412,29 @@ void Scene::drawSky ()
     if (d->skyShader->error() != CG_NO_ERROR) {
         qCritical() << Q_FUNC_INFO << d->skyShader->errorString();
     }
+
+    //glDepthMask(GL_TRUE);
+
+    glPopAttrib();
+}
+
+void Scene::wheelEvent (QWheelEvent* evt)
+{
+    qreal delta;
+    switch (evt->orientation()) {
+    case Qt::Horizontal:
+        delta = -0.001 * evt->delta();
+        d->camera->setAzimuth(d->camera->azimuth() + delta);
+        break;
+    case Qt::Vertical:
+        delta = 0.001 * evt->delta();
+        d->camera->setAltitude(d->camera->altitude() + delta);
+        break;
+    default:
+        break;
+    }
+}
+
+void Scene::drawScene ()
+{
 }

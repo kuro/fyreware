@@ -41,11 +41,14 @@ private:
     void resizeGL (int w, int h);
     void paintGL ();
 
+    void drawScene ();
     void drawSpectrum ();
     void drawSky ();
 
     void showEvent (QShowEvent* evt);
     void closeEvent (QCloseEvent* evt);
+
+    void wheelEvent (QWheelEvent* evt);
 
 private slots:
     void on_timer_timeout ();

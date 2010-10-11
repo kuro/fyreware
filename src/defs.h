@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <math.h>
+
 /**
  * @warning the value of @a avg will be modified
  *
@@ -36,3 +38,6 @@ inline void expMovAvg (T& avg, T new_value, qreal n)
     avg = (new_value * alpha) + (avg * (1.0 - alpha));
 }
 
+const qreal        pi = 4.0 * atan(1.0);
+const qreal   half_pi = pi * 0.5;
+const qreal quater_pi = pi * 0.25;
