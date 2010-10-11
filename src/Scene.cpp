@@ -293,8 +293,10 @@ void Scene::loadCubeMap (const QDir& path)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     // init shader
-    d->skyShader->addShaderFromSourceFile(CG_GL_VERTEX,   "sky.cg", "main_vp");
-    d->skyShader->addShaderFromSourceFile(CG_GL_FRAGMENT, "sky.cg", "main_fp");
+    d->skyShader->addShaderFromSourceFile(
+        CG_GL_VERTEX, ":media/shaders/sky.cg", "main_vp");
+    d->skyShader->addShaderFromSourceFile(
+        CG_GL_FRAGMENT, ":media/shaders/sky.cg", "main_fp");
     d->skyShader->link();
 
     if (d->skyShader->error() != CG_NO_ERROR) {

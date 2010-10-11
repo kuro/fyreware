@@ -1,0 +1,24 @@
+
+void main_vp (
+    float4 modelPos     : POSITION,
+    uniform matrix mvp  : state.matrix.mvp,
+    out float4 worldPos : POSITION,
+    out float3 texCoord : TEXCOORD0
+    )
+{
+    worldPos = mul(mvp, modelPos);
+    //worldPos = mul(modelPos, mvp);
+    texCoord = modelPos;
+}
+
+float4 main_fp (
+    float3 texCoord         : TEXCOORD0,
+    uniform samplerCUBE env : TEXTURE0
+    ) : COLOR
+{
+    // see the bug in the cubemap loader
+    texCoord.x = -texCoord.x;
+    texCoord.y = -texCoord.y;
+    float4 c = texCUBE(env, texCoord.xyz);
+    return float4(c.xyz, 1.0);
+}

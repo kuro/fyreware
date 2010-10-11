@@ -16,8 +16,9 @@ include_directories(
     )
 
 qt4_automoc(${source_files})
+qt4_add_resources(resource_files fyreware.qrc)
 
-add_executable(fyreware ${source_files})
+add_executable(fyreware ${source_files} ${resource_files})
 target_link_libraries(fyreware
     QtFMOD
     ${FMOD_LIBRARY}
