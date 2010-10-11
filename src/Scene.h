@@ -23,6 +23,8 @@
 
 #include <QGLWidget>
 
+class QDir;
+
 class Scene : public QGLWidget
 {
     Q_OBJECT
@@ -33,12 +35,14 @@ public:
 
 private:
     void loadSong (const QString& fileName);
+    void loadCubeMap (const QDir& path);
 
     void initializeGL ();
     void resizeGL (int w, int h);
     void paintGL ();
 
     void drawSpectrum ();
+    void drawSky ();
 
     void showEvent (QShowEvent* evt);
     void closeEvent (QCloseEvent* evt);

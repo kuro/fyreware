@@ -23,11 +23,15 @@
 
 #include "defs.h"
 
+#include "ShaderProgram.h"
+
 #include <QTimer>
 #include <QCoreApplication>
 #include <QSettings>
 #include <QDebug>
 #include <QIcon>
+#include <QDir>
+#include <QVector3D>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -72,13 +76,20 @@ struct Scene::Private
     QVector<float> spectrumNew[2];      ///< values before smoothing
     QVector<float> spectrum[2];         ///< values after smoothing
 
+    GLuint cubeMapTex;
+
+    QVector3D eye;
+
+    ShaderProgram* skyShader;
 
     Private (Scene* q) :
         settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
         spectrumLength(256),
-        spectrumWindowType(FMOD_DSP_FFT_WINDOW_RECT)
+        spectrumWindowType(FMOD_DSP_FFT_WINDOW_RECT),
+        cubeMapTex(0),
+        skyShader(new ShaderProgram(q))
     {
         timer->setObjectName("timer");
         fsys->setObjectName("fsys");
@@ -100,8 +111,6 @@ Scene::Scene (QWidget* parent) :
 
     d->fsys->init(1);
     fsysCheck();
-
-    loadSong(qApp->arguments().last());
 
     d->timer->start(16);
 }
@@ -138,6 +147,14 @@ void Scene::closeEvent (QCloseEvent* evt)
 void Scene::initializeGL ()
 {
     qglClearColor("black");
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    /// @todo remove the hard coded value
+    loadCubeMap(QDir("Bridge.cubemap"));
+
+    loadSong(qApp->arguments().last());
 }
 
 void Scene::resizeGL (int w, int h)
@@ -149,11 +166,22 @@ void Scene::paintGL ()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(90.0, qreal(width())/height(), 1.0, 1000.0);
+
+    d->eye = QVector3D(0, 0, 5);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glTranslated(-d->eye.x(), -d->eye.y(), -d->eye.z());
+
+    drawSky();
     drawSpectrum();
 
     GLuint gl_error = glGetError();
     if (gl_error != GL_NO_ERROR) {
-        qCritical("OpenGL Error: %s\n", gluErrorString(gl_error));
+        qFatal("OpenGL Error: %s\n", gluErrorString(gl_error));
     }
 
 }
@@ -171,27 +199,29 @@ void Scene::loadSong (const QString& fileName)
 
 void Scene::on_timer_timeout ()
 {
-    int nbUpdated;
-    QHash<QString, QtFMOD::Tag> tags (d->sound->tags(&nbUpdated));
-    if (nbUpdated > 0) {
-        if (tags.contains("TITLE")) {
-            QString title (tr("%0 / %1 - FyreWare"));
-            title = title.arg(tags["ARTIST"].value().toString());
-            title = title.arg(tags["TITLE"].value().toString());
-            setWindowTitle(title);
+    if (d->sound) {
+        int nbUpdated;
+        QHash<QString, QtFMOD::Tag> tags (d->sound->tags(&nbUpdated));
+        if (nbUpdated > 0) {
+            if (tags.contains("TITLE")) {
+                QString title (tr("%0 / %1 - FyreWare"));
+                title = title.arg(tags["ARTIST"].value().toString());
+                title = title.arg(tags["TITLE"].value().toString());
+                setWindowTitle(title);
+            }
+            qDebug();
         }
-        qDebug();
-    }
-    QHashIterator<QString, QtFMOD::Tag> tagIter (tags);
-    while (tagIter.hasNext()) {
-        tagIter.next();
-        QtFMOD::Tag tag (tagIter.value());
-        if (tag.updated()) {
-            qDebug().nospace()
-                << qPrintable(tagIter.key()) << ": "
-                << qPrintable(tag.value().toString());
-            if (tag.name() == "APIC") {
-                setWindowIcon(QPixmap::fromImage(tag.toImage()));
+        QHashIterator<QString, QtFMOD::Tag> tagIter (tags);
+        while (tagIter.hasNext()) {
+            tagIter.next();
+            QtFMOD::Tag tag (tagIter.value());
+            if (tag.updated()) {
+                qDebug().nospace()
+                    << qPrintable(tagIter.key()) << ": "
+                    << qPrintable(tag.value().toString());
+                if (tag.name() == "APIC") {
+                    setWindowIcon(QPixmap::fromImage(tag.toImage()));
+                }
             }
         }
     }
@@ -207,6 +237,8 @@ void Scene::drawSpectrum ()
     if (!d->channel->isPlaying()) {
         return;
     }
+
+    glDisable(GL_TEXTURE_CUBE_MAP);
 
     d->channel->spectrum(d->spectrumNew[0], 0, d->spectrumWindowType);
     d->channel->spectrum(d->spectrumNew[1], 1, d->spectrumWindowType);
@@ -244,4 +276,129 @@ void Scene::drawSpectrum ()
     }
     glEnd();
 
+}
+
+void Scene::loadCubeMap (const QDir& path)
+{
+    glGenTextures(1, &d->cubeMapTex);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, d->cubeMapTex);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
+                    GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    // init shader
+    d->skyShader->addShaderFromSourceFile(CG_GL_VERTEX,   "sky.cg", "main_vp");
+    d->skyShader->addShaderFromSourceFile(CG_GL_FRAGMENT, "sky.cg", "main_fp");
+    d->skyShader->link();
+
+    if (d->skyShader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << d->skyShader->errorString();
+    }
+
+    /**
+     * @bug Check this.  Using convertToGLFormat(), which flips in addition to rgb swapping.  Then, flipping x and y in the shader fragment's cube texture lookup.  And finally, swapped neg and pos y images.
+     */
+
+    // prep images
+    QImage posx (path.filePath("posx.jpg"));
+    QImage negx (path.filePath("negx.jpg"));
+    QImage posy (path.filePath("negy.jpg"));  // swapped neg y...
+    QImage negy (path.filePath("posy.jpg"));  // with the pos y here
+    QImage posz (path.filePath("posz.jpg"));
+    QImage negz (path.filePath("negz.jpg"));
+
+    /// @bug verify image flipping
+#if 1
+    posx = convertToGLFormat(posx);
+    negx = convertToGLFormat(negx);
+    posy = convertToGLFormat(posy);
+    negy = convertToGLFormat(negy);
+    posz = convertToGLFormat(posz);
+    negz = convertToGLFormat(negz);
+#else
+    posx = posx.rgbSwapped();
+    negx = negx.rgbSwapped();
+    posy = posy.rgbSwapped();
+    negy = negy.rgbSwapped();
+    posz = posz.rgbSwapped();
+    negz = negz.rgbSwapped();
+#endif
+
+    // transfer images
+    Qt::AspectRatioMode aspectRatioMode = Qt::IgnoreAspectRatio;
+    Qt::TransformationMode transformMode = Qt::SmoothTransformation;
+    for (int width = 2048, level = 0; width > 0; width >>= 1, level++) {
+        posx = posx.scaled(width, width, aspectRatioMode, transformMode);
+        negx = negx.scaled(width, width, aspectRatioMode, transformMode);
+        posy = posy.scaled(width, width, aspectRatioMode, transformMode);
+        negy = negy.scaled(width, width, aspectRatioMode, transformMode);
+        posz = posz.scaled(width, width, aspectRatioMode, transformMode);
+        negz = negz.scaled(width, width, aspectRatioMode, transformMode);
+
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, level, GL_RGBA,
+                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                     posx.bits()
+                    );
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, level, GL_RGBA,
+                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                     negx.bits()
+                    );
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, level, GL_RGBA,
+                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                     posy.bits()
+                    );
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, level, GL_RGBA,
+                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                     negy.bits()
+                    );
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, level, GL_RGBA,
+                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                     posz.bits()
+                    );
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, level, GL_RGBA,
+                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                     negz.bits()
+                    );
+    }
+
+}
+
+/**
+ * @todo Replace with a vertex buffer.
+ */
+void Scene::drawSky ()
+{
+    glEnable(GL_TEXTURE_CUBE_MAP);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, d->cubeMapTex);
+
+    d->skyShader->bind();
+
+    glPushMatrix();
+    glTranslated(d->eye.x(), d->eye.y(), d->eye.z());
+    static GLuint dlist = 0;
+    if (glIsList(dlist)) {
+        glCallList(dlist);
+    } else {
+        dlist = glGenLists(1);
+        glNewList(dlist, GL_COMPILE_AND_EXECUTE);
+
+        GLUquadric* quadric = gluNewQuadric();
+        gluSphere(quadric, 10.0, 30, 30);
+        gluDeleteQuadric(quadric);
+
+        glEndList();
+    }
+    glPopMatrix();
+
+    d->skyShader->release();
+
+    if (d->skyShader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << d->skyShader->errorString();
+    }
 }
