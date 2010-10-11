@@ -24,6 +24,9 @@
 #include <QGLWidget>
 
 class QDir;
+class QGestureEvent;
+class QPinchGesture;
+class QSwipeGesture;
 
 class Scene : public QGLWidget
 {
@@ -49,6 +52,11 @@ private:
     void closeEvent (QCloseEvent* evt);
 
     void wheelEvent (QWheelEvent* evt);
+
+    bool event (QEvent* evt);
+    bool gestureEvent (QGestureEvent* evt);
+    void pinchGesture (QPinchGesture* gesture);
+    void swipeGesture (QSwipeGesture* gesture);
 
 private slots:
     void on_timer_timeout ();

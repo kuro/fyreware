@@ -33,6 +33,7 @@
 #include <QIcon>
 #include <QDir>
 #include <QWheelEvent>
+#include <QGesture>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -117,6 +118,12 @@ Scene::Scene (QWidget* parent) :
     fsysCheck();
 
     d->timer->start(16);
+
+    grabGesture(Qt::TapGesture);
+    grabGesture(Qt::TapAndHoldGesture);
+    grabGesture(Qt::PanGesture);
+    grabGesture(Qt::PinchGesture);
+    grabGesture(Qt::SwipeGesture);
 }
 
 Scene::~Scene ()
@@ -433,6 +440,52 @@ void Scene::wheelEvent (QWheelEvent* evt)
     default:
         break;
     }
+}
+
+bool Scene::event (QEvent* evt)
+{
+    if (evt->type() == QEvent::Gesture) {
+        return gestureEvent(static_cast<QGestureEvent*>(evt));
+    }
+    return QGLWidget::event(evt);
+}
+
+bool Scene::gestureEvent (QGestureEvent* evt)
+{
+    QGesture* gesture = evt->gestures().first();
+    switch (gesture->gestureType()) {
+    case Qt::TapGesture:
+        break;
+    case Qt::TapAndHoldGesture:
+        break;
+    case Qt::PanGesture:
+        break;
+    case Qt::PinchGesture:
+        pinchGesture(static_cast<QPinchGesture*>(gesture));
+        break;
+    case Qt::SwipeGesture:
+        swipeGesture(static_cast<QSwipeGesture*>(gesture));
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+
+/**
+ * @bug This is not smooth.
+ */
+void Scene::pinchGesture (QPinchGesture* pinch)
+{
+    if (pinch->changeFlags().testFlag(QPinchGesture::ScaleFactorChanged)) {
+        qreal scale = pinch->scaleFactor();
+        d->camera->setDistance(d->camera->distance() / scale);
+    }
+}
+
+void Scene::swipeGesture (QSwipeGesture* swipe)
+{
+    Q_UNUSED(swipe);
 }
 
 void Scene::drawScene ()
