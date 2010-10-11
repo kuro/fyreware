@@ -31,6 +31,8 @@ struct ShaderProgram::Private
 
     QList<Shader*> shaders;
 
+    CGerror error;
+
     Private (ShaderProgram* q)
     {
         Q_UNUSED(q);
@@ -48,15 +50,21 @@ ShaderProgram::~ShaderProgram ()
 {
 }
 
+/**
+ * @warning Calling this consumes an error message.
+ */
 CGerror ShaderProgram::error () const
 {
-    return cgGetError();
+    d->error = cgGetError();
+    return d->error;
 }
 
+/**
+ * Must call error() (once) first.
+ */
 QString ShaderProgram::errorString () const
 {
-    CGerror err = cgGetError();
-    return cgGetErrorString(err);
+    return cgGetErrorString(d->error);
 }
 
 bool ShaderProgram::addShaderFromSourceCode (
