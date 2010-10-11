@@ -1,6 +1,8 @@
 set(source_files
     defs.h
     main.cpp
+    Camera.h
+    Camera.cpp
     Scene.h
     Scene.cpp
     ShaderProgram.h

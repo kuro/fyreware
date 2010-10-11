@@ -24,6 +24,7 @@
 #include "defs.h"
 
 #include "ShaderProgram.h"
+#include "Camera.h"
 
 #include <QTimer>
 #include <QCoreApplication>
@@ -31,11 +32,12 @@
 #include <QDebug>
 #include <QIcon>
 #include <QDir>
-#include <QVector3D>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
 #include <QtFMOD/Sound.h>
+
+#include <LinearMath/btVector3.h>
 
 #define SPECTRUM_HEIGHT 1
 #define SPECTRUM_GENERATIONS 8
@@ -78,7 +80,7 @@ struct Scene::Private
 
     GLuint cubeMapTex;
 
-    QVector3D eye;
+    Camera camera;
 
     ShaderProgram* skyShader;
 
@@ -170,11 +172,12 @@ void Scene::paintGL ()
     glLoadIdentity();
     gluPerspective(90.0, qreal(width())/height(), 1.0, 1000.0);
 
-    d->eye = QVector3D(0, 0, 5);
-
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslated(-d->eye.x(), -d->eye.y(), -d->eye.z());
+
+    d->camera.setPosition(btVector3(0, 0, 5));
+    d->camera.lookAt(btVector3(0, 10, 0));
+    d->camera.invoke();
 
     drawSky();
     drawSpectrum();
@@ -382,7 +385,9 @@ void Scene::drawSky ()
     d->skyShader->bind();
 
     glPushMatrix();
-    glTranslated(d->eye.x(), d->eye.y(), d->eye.z());
+    glTranslated(d->camera.position().x(),
+                 d->camera.position().y(),
+                 d->camera.position().z());
     static GLuint dlist = 0;
     if (glIsList(dlist)) {
         glCallList(dlist);
