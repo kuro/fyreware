@@ -1,0 +1,22 @@
+
+void main_vp (
+    float4 mPos : POSITION,
+    float4 inNormal : NORMAL,
+    uniform matrix mvp : state.matrix.mvp,
+    out float3 normal,
+    out float4 screenPos : POSITION
+    )
+{
+    normal = inNormal;
+    screenPos = mul(mvp, mPos);
+}
+
+float4 main_fp (
+    float4 normal
+    ) : COLOR
+{
+    //normal.x = 0;
+    //normal.y = 0;
+    //normal.z = 0;
+    return float4((normalize(normal.xyz) * float3(0.5)) + float3(0.5), 1.0);
+}

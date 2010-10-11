@@ -85,6 +85,7 @@ struct Scene::Private
     OrbitalCamera* camera;
 
     ShaderProgram* skyShader;
+    ShaderProgram* debugNormalsShader;
 
     Private (Scene* q) :
         settings(new QSettings(q)),
@@ -94,7 +95,8 @@ struct Scene::Private
         spectrumWindowType(FMOD_DSP_FFT_WINDOW_RECT),
         cubeMapTex(0),
         camera(new OrbitalCamera(q)),
-        skyShader(new ShaderProgram(q))
+        skyShader(new ShaderProgram(q)),
+        debugNormalsShader(new ShaderProgram(q))
     {
         timer->setObjectName("timer");
         fsys->setObjectName("fsys");
@@ -308,9 +310,17 @@ void Scene::loadCubeMap (const QDir& path)
     d->skyShader->addShaderFromSourceFile(
         CG_GL_FRAGMENT, ":media/shaders/sky.cg", "main_fp");
     d->skyShader->link();
-
     if (d->skyShader->error() != CG_NO_ERROR) {
         qCritical() << Q_FUNC_INFO << d->skyShader->errorString();
+    }
+
+    d->debugNormalsShader->addShaderFromSourceFile(
+        CG_GL_VERTEX, ":media/shaders/debugNormals.cg", "main_vp");
+    d->debugNormalsShader->addShaderFromSourceFile(
+        CG_GL_FRAGMENT, ":media/shaders/debugNormals.cg", "main_fp");
+    d->debugNormalsShader->link();
+    if (d->debugNormalsShader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();
     }
 
     /**
@@ -486,4 +496,10 @@ void Scene::swipeGesture (QSwipeGesture* swipe)
 
 void Scene::drawScene ()
 {
+    d->debugNormalsShader->bind();
+    d->debugNormalsShader->release();
+
+    if (d->debugNormalsShader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();
+    }
 }

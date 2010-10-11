@@ -2,5 +2,6 @@
 <RCC version="1.0">
 <qresource>
     <file>../media/shaders/sky.cg</file>
+    <file>../media/shaders/debugNormals.cg</file>
 </qresource>
 </RCC>
