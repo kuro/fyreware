@@ -179,7 +179,7 @@ void Scene::paintGL ()
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(90.0, qreal(width())/height(), 1.0, 1000.0);
+    gluPerspective(60.0, qreal(width())/height(), 1.0, 1000.0);
     d->camera->setMaxDistance(1000.0);
 
     glMatrixMode(GL_MODELVIEW);
@@ -391,8 +391,6 @@ void Scene::drawSky ()
     glEnable(GL_TEXTURE_CUBE_MAP);
     glBindTexture(GL_TEXTURE_CUBE_MAP, d->cubeMapTex);
 
-    //glDepthMask(GL_FALSE);
-
     d->skyShader->bind();
 
     glPushMatrix();
@@ -407,7 +405,7 @@ void Scene::drawSky ()
         glNewList(dlist, GL_COMPILE_AND_EXECUTE);
 
         GLUquadric* quadric = gluNewQuadric();
-        gluSphere(quadric, 10.0, 30, 30);
+        gluSphere(quadric, 1000.0, 3, 3);
         gluDeleteQuadric(quadric);
 
         glEndList();
@@ -419,8 +417,6 @@ void Scene::drawSky ()
     if (d->skyShader->error() != CG_NO_ERROR) {
         qCritical() << Q_FUNC_INFO << d->skyShader->errorString();
     }
-
-    //glDepthMask(GL_TRUE);
 
     glPopAttrib();
 }
