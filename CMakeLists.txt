@@ -8,6 +8,7 @@ include(${QT_USE_FILE})
 find_package(FMOD REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Cg REQUIRED)
+find_package(Bullet REQUIRED)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
