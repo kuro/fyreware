@@ -22,6 +22,8 @@
 #pragma once
 
 #include <math.h>
+#include <QDebug>
+#include <LinearMath/btVector3.h>
 
 /**
  * @warning the value of @a avg will be modified
@@ -41,3 +43,27 @@ inline void expMovAvg (T& avg, T new_value, qreal n)
 const qreal        pi = 4.0 * atan(1.0);
 const qreal   half_pi = pi * 0.5;
 const qreal quater_pi = pi * 0.25;
+
+inline
+qreal randf (qreal max = 1.0)
+{
+    return (qreal(qrand()) / RAND_MAX) * max;
+}
+
+inline
+qreal randf (qreal min, qreal max)
+{
+    qreal diff (max - min);
+    return (qreal(qrand()) / RAND_MAX) * diff + min;
+}
+
+inline
+QDebug operator<< (QDebug& d, const btVector3& v)
+{
+    QString str ("btVector3(%0, %1, %2)");
+    str = str.arg(v.x());
+    str = str.arg(v.y());
+    str = str.arg(v.z());
+    d << str;
+    return d;
+}

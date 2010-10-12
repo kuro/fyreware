@@ -22,6 +22,11 @@
 #pragma once
 
 #include <QGLWidget>
+#include <QPointer>
+
+#include "Scene.h"
+
+#include <btBulletDynamicsCommon.h>
 
 class QDir;
 class QGestureEvent;
@@ -36,9 +41,17 @@ public:
     Scene (QWidget* parent = NULL);
     virtual ~Scene ();
 
+    btDynamicsWorld* dynamicsWorld () const;
+
+signals:
+    void draw ();
+    void update (qreal dt);
+
 private:
     void loadSong (const QString& fileName);
     void loadCubeMap (const QDir& path);
+
+    void initPhysics ();
 
     void initializeGL ();
     void resizeGL (int w, int h);
@@ -58,6 +71,14 @@ private:
     void pinchGesture (QPinchGesture* gesture);
     void swipeGesture (QSwipeGesture* gesture);
 
+    void checkTags ();
+    void analyzeSound ();
+
+    void launch ();
+
+    static void internalTickCallback (
+        btDynamicsWorld* world, btScalar timeStep);
+
 private slots:
     void on_timer_timeout ();
 
@@ -65,3 +86,5 @@ private:
     struct Private;
     QScopedPointer<Private> d;
 };
+
+extern QPointer<Scene> scene;

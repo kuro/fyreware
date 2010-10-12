@@ -20,7 +20,7 @@ struct OrbitalCamera::Private
     qreal maxDistance;
 
     Private (OrbitalCamera* q) :
-        distance(10),
+        distance(200),
         altitude(half_pi),
         azimuth(-half_pi),
         focus(0.0, 0.0, 0.0),

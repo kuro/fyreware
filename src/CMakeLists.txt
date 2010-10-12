@@ -11,6 +11,8 @@ set(source_files
     ShaderProgram.cpp
     Shader.h
     Shader.cpp
+    Shell.h
+    Shell.cpp
     )
 
 include_directories(

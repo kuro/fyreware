@@ -25,6 +25,7 @@
 
 #include "ShaderProgram.h"
 #include "OrbitalCamera.h"
+#include "Shell.h"
 
 #include <QTimer>
 #include <QCoreApplication>
@@ -40,6 +41,8 @@
 #include <QtFMOD/Sound.h>
 
 #include <LinearMath/btVector3.h>
+
+#include <btBulletDynamicsCommon.h>
 
 #define SPECTRUM_HEIGHT 1
 #define SPECTRUM_GENERATIONS 8
@@ -65,6 +68,8 @@
         }                                                                   \
     } while (0)
 
+QPointer<Scene> scene;
+
 struct Scene::Private
 {
     QSettings* settings;
@@ -87,6 +92,15 @@ struct Scene::Private
     ShaderProgram* skyShader;
     ShaderProgram* debugNormalsShader;
 
+    QTime time;
+    qreal dt;
+
+    btDynamicsWorld* dynamicsWorld;
+    btBroadphaseInterface* broadphaseInterface;
+    btConstraintSolver* constraintSolver;
+    btCollisionConfiguration* collisionConfiguration;
+    btCollisionDispatcher* dispatcher;
+
     Private (Scene* q) :
         settings(new QSettings(q)),
         timer(new QTimer(q)),
@@ -96,7 +110,14 @@ struct Scene::Private
         cubeMapTex(0),
         camera(new OrbitalCamera(q)),
         skyShader(new ShaderProgram(q)),
-        debugNormalsShader(new ShaderProgram(q))
+        debugNormalsShader(new ShaderProgram(q)),
+        dt(0.01),
+
+        dynamicsWorld(NULL),
+        broadphaseInterface(NULL),
+        constraintSolver(NULL),
+        collisionConfiguration(NULL),
+        dispatcher(NULL)
     {
         timer->setObjectName("timer");
         fsys->setObjectName("fsys");
@@ -114,12 +135,17 @@ Scene::Scene (QWidget* parent) :
     QGLWidget(parent),
     d(new Private(this))
 {
+    Q_ASSERT(scene.isNull());
+    scene = this;
+
     connect(d->timer, SIGNAL(timeout()), d->fsys, SLOT(update()));
 
     d->fsys->init(1);
     fsysCheck();
 
     d->timer->start(16);
+
+    initPhysics();
 
     grabGesture(Qt::TapGesture);
     grabGesture(Qt::TapAndHoldGesture);
@@ -130,6 +156,39 @@ Scene::Scene (QWidget* parent) :
 
 Scene::~Scene ()
 {
+}
+
+btDynamicsWorld* Scene::dynamicsWorld () const
+{
+    return d->dynamicsWorld;
+}
+
+void Scene::initPhysics ()
+{
+    qDebug() << "initializing physics";
+    d->collisionConfiguration = new btDefaultCollisionConfiguration();
+    Q_CHECK_PTR(d->collisionConfiguration);
+
+    d->dispatcher = new btCollisionDispatcher(d->collisionConfiguration);
+    Q_CHECK_PTR(d->dispatcher);
+
+    d->broadphaseInterface = new btDbvtBroadphase();
+    Q_CHECK_PTR(d->broadphaseInterface);
+
+    d->constraintSolver = new btSequentialImpulseConstraintSolver;
+    Q_CHECK_PTR(d->constraintSolver);
+
+    d->dynamicsWorld = new btDiscreteDynamicsWorld(
+        d->dispatcher,
+        d->broadphaseInterface,
+        d->constraintSolver,
+        d->collisionConfiguration
+        );
+    Q_CHECK_PTR(d->dynamicsWorld);
+
+    d->dynamicsWorld->setInternalTickCallback(internalTickCallback, this);
+
+    d->dynamicsWorld->setGravity(btVector3(0, -9.806, 0));
 }
 
 void Scene::showEvent (QShowEvent* evt)
@@ -159,6 +218,8 @@ void Scene::closeEvent (QCloseEvent* evt)
 
 void Scene::initializeGL ()
 {
+    qDebug() << "initializing graphics";
+
     qglClearColor("black");
 
     glEnable(GL_DEPTH_TEST);
@@ -211,34 +272,72 @@ void Scene::loadSong (const QString& fileName)
     Q_ASSERT(d->channel);
 }
 
-void Scene::on_timer_timeout ()
+void Scene::checkTags ()
 {
-    if (d->sound) {
-        int nbUpdated;
-        QHash<QString, QtFMOD::Tag> tags (d->sound->tags(&nbUpdated));
-        if (nbUpdated > 0) {
-            if (tags.contains("TITLE")) {
-                QString title (tr("%0 / %1 - FyreWare"));
-                title = title.arg(tags["ARTIST"].value().toString());
-                title = title.arg(tags["TITLE"].value().toString());
-                setWindowTitle(title);
-            }
-            qDebug();
+    if (!d->sound) {
+        return;
+    }
+    int nbUpdated;
+    QHash<QString, QtFMOD::Tag> tags (d->sound->tags(&nbUpdated));
+    if (nbUpdated > 0) {
+        if (tags.contains("TITLE")) {
+            QString title (tr("%0 / %1 - FyreWare"));
+            title = title.arg(tags["ARTIST"].value().toString());
+            title = title.arg(tags["TITLE"].value().toString());
+            setWindowTitle(title);
         }
-        QHashIterator<QString, QtFMOD::Tag> tagIter (tags);
-        while (tagIter.hasNext()) {
-            tagIter.next();
-            QtFMOD::Tag tag (tagIter.value());
-            if (tag.updated()) {
-                qDebug().nospace()
-                    << qPrintable(tagIter.key()) << ": "
-                    << qPrintable(tag.value().toString());
-                if (tag.name() == "APIC") {
-                    setWindowIcon(QPixmap::fromImage(tag.toImage()));
-                }
+        qDebug();
+    }
+    QHashIterator<QString, QtFMOD::Tag> tagIter (tags);
+    while (tagIter.hasNext()) {
+        tagIter.next();
+        QtFMOD::Tag tag (tagIter.value());
+        if (tag.updated()) {
+            qDebug().nospace()
+                << qPrintable(tagIter.key()) << ": "
+                << qPrintable(tag.value().toString());
+            if (tag.name() == "APIC") {
+                setWindowIcon(QPixmap::fromImage(tag.toImage()));
             }
         }
     }
+}
+
+void Scene::analyzeSound ()
+{
+    if (!d->channel) {
+        return;
+    }
+    qreal sum[2];
+    for (int chan = 0; chan < 2; chan++) {
+        sum[chan] = 0.0;
+        for (int i = 0; i < d->spectrum[chan].size(); i++) {
+            sum[chan] += d->spectrum[chan][i];
+        }
+    }
+    if (((1.0 / (sum[0] + sum[1])) * randf(1000)) < 1.0) {
+        launch();
+    }
+}
+
+void Scene::launch ()
+{
+    Shell* shell = new Shell(this);
+    connect(this, SIGNAL(draw()), shell, SLOT(draw()));
+    connect(this, SIGNAL(update(qreal)), shell, SLOT(update(qreal)));
+}
+
+void Scene::on_timer_timeout ()
+{
+    qreal realDt = 0.001 * d->time.restart();
+    expMovAvg(d->dt, realDt, 30);
+
+    checkTags();
+    analyzeSound();
+
+    // calling stepSimulation eventually leads to internalTickCallback,
+    // which eventually emits update signal
+    d->dynamicsWorld->stepSimulation(d->dt);
 
     updateGL();
 }
@@ -497,9 +596,19 @@ void Scene::swipeGesture (QSwipeGesture* swipe)
 void Scene::drawScene ()
 {
     d->debugNormalsShader->bind();
+    emit draw();
     d->debugNormalsShader->release();
 
     if (d->debugNormalsShader->error() != CG_NO_ERROR) {
         qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();
     }
+}
+
+/**
+ * Bullet callback.
+ */
+void Scene::internalTickCallback (btDynamicsWorld* world, btScalar timeStep)
+{
+    Scene* scene = static_cast<Scene*>(world->getWorldUserInfo());
+    emit scene->update(timeStep);
 }
