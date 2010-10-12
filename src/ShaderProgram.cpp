@@ -50,6 +50,11 @@ ShaderProgram::~ShaderProgram ()
 {
 }
 
+CGprogram ShaderProgram::program () const
+{
+    return d->program;
+}
+
 /**
  * @warning Calling this consumes an error message.
  */

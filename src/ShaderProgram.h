@@ -45,6 +45,8 @@ public:
     CGerror error () const;
     QString errorString () const;
 
+    CGprogram program () const;
+
 private:
     struct Private;
     QScopedPointer<Private> d;
