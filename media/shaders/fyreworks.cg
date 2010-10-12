@@ -1,0 +1,19 @@
+
+void main_vp (
+    float4 mColor : COLOR,
+    float4 mPos : POSITION,
+    uniform matrix mvp : state.matrix.mvp,
+    out float4 screenPos : POSITION,
+    out float4 oColor : COLOR
+    )
+{
+    oColor = mColor;
+    screenPos = mul(mvp, mPos);
+}
+
+float4 main_fp (
+    float4 color : COLOR
+    ) : COLOR
+{
+    return float4(color.xyz, 1.0);
+}

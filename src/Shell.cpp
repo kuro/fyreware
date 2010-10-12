@@ -6,6 +6,7 @@
 
 #include "Shell.moc"
 
+#include "Cluster.h"
 #include "Scene.h"
 #include "defs.h"
 
@@ -110,7 +111,10 @@ void Shell::draw ()
 void Shell::update (qreal dt)
 {
     if (d->age >= d->lifetime) {
-        /// @todo explode
+        Cluster* cluster = new Cluster(d->trx.getOrigin(), scene);
+        connect(scene, SIGNAL(update(qreal)), cluster, SLOT(update(qreal)));
+        connect(scene, SIGNAL(drawClusters()), cluster, SLOT(draw()));
+
         scene->dynamicsWorld()->removeRigidBody(d->rigidBody);
         deleteLater();
     } else {

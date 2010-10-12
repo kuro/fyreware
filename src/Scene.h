@@ -44,7 +44,8 @@ public:
     btDynamicsWorld* dynamicsWorld () const;
 
 signals:
-    void draw ();
+    void drawShells ();
+    void drawClusters ();
     void update (qreal dt);
 
 private:

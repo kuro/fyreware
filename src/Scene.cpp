@@ -91,6 +91,7 @@ struct Scene::Private
 
     ShaderProgram* skyShader;
     ShaderProgram* debugNormalsShader;
+    ShaderProgram* fyreworksShader;
 
     QTime time;
     qreal dt;
@@ -111,6 +112,7 @@ struct Scene::Private
         camera(new OrbitalCamera(q)),
         skyShader(new ShaderProgram(q)),
         debugNormalsShader(new ShaderProgram(q)),
+        fyreworksShader(new ShaderProgram(q)),
         dt(0.01),
 
         dynamicsWorld(NULL),
@@ -323,7 +325,7 @@ void Scene::analyzeSound ()
 void Scene::launch ()
 {
     Shell* shell = new Shell(this);
-    connect(this, SIGNAL(draw()), shell, SLOT(draw()));
+    connect(this, SIGNAL(drawShells()), shell, SLOT(draw()));
     connect(this, SIGNAL(update(qreal)), shell, SLOT(update(qreal)));
 }
 
@@ -420,6 +422,15 @@ void Scene::loadCubeMap (const QDir& path)
     d->debugNormalsShader->link();
     if (d->debugNormalsShader->error() != CG_NO_ERROR) {
         qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();
+    }
+
+    d->fyreworksShader->addShaderFromSourceFile(
+        CG_GL_VERTEX, ":media/shaders/fyreworks.cg", "main_vp");
+    d->fyreworksShader->addShaderFromSourceFile(
+        CG_GL_FRAGMENT, ":media/shaders/fyreworks.cg", "main_fp");
+    d->fyreworksShader->link();
+    if (d->fyreworksShader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << d->fyreworksShader->errorString();
     }
 
     /**
@@ -596,8 +607,12 @@ void Scene::swipeGesture (QSwipeGesture* swipe)
 void Scene::drawScene ()
 {
     d->debugNormalsShader->bind();
-    emit draw();
+    emit drawShells();
     d->debugNormalsShader->release();
+
+    d->fyreworksShader->bind();
+    emit drawClusters();
+    d->fyreworksShader->release();
 
     if (d->debugNormalsShader->error() != CG_NO_ERROR) {
         qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();

@@ -3,5 +3,6 @@
 <qresource>
     <file>../media/shaders/sky.cg</file>
     <file>../media/shaders/debugNormals.cg</file>
+    <file>../media/shaders/fyreworks.cg</file>
 </qresource>
 </RCC>
