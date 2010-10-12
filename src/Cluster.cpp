@@ -7,12 +7,16 @@
 #include "Cluster.moc"
 
 #include "defs.h"
+#include "Scene.h"
+#include "ShaderProgram.h"
 
 #include <LinearMath/btVector3.h>
 
 #include <QVector>
 #include <QGLWidget>
 #include <QDebug>
+
+#include <Cg/cgGL.h>
 
 struct Cluster::Private
 {
@@ -23,11 +27,13 @@ struct Cluster::Private
     qreal age;
     QHash<QString, btVector3> colorTable;
     btVector3 color;
+    int starCount;
 
     Private (const btVector3& origin, Cluster* q) :
         origin(origin),
         lifetime(10),
-        age(0.0)
+        age(0.0),
+        starCount(0)
     {
         Q_UNUSED(q);
     }
@@ -78,6 +84,7 @@ void Cluster::emitStar (qreal vx, qreal vy, qreal vz)
 {
     btVector3 initialVelocity (vx, vy, vz);
     d->initialVelocities << initialVelocity;
+    d->starCount++;
 }
 
 void Cluster::update (qreal dt)
@@ -91,11 +98,10 @@ void Cluster::update (qreal dt)
 
 void Cluster::draw ()
 {
-    btVector3 g (0, -9.806, 0);
-
     glColor3fv(d->color);
 
-    glPointSize(10);
+#if 0
+    btVector3 g (0, -9.806, 0);
     glBegin(GL_POINTS);
     foreach (const btVector3& v0, d->initialVelocities) {
         qreal& t = d->age;
@@ -103,4 +109,18 @@ void Cluster::draw ()
         glVertex3f(p.x(), p.y(), p.z());
     }
     glEnd();
+#else
+    glEnableClientState(GL_VERTEX_ARRAY);
+    CGprogram prog = scene->shader("fyreworks")->program();
+    CGparameter v0 = cgGetNamedParameter(prog, "v0");
+    CGparameter t = cgGetNamedParameter(prog, "t");
+    cgGLEnableClientState(v0);
+    cgGLSetParameter1f(t, d->age);
+    cgGLSetParameterPointer(v0, 3, GL_FLOAT, sizeof(btVector3),
+                            d->initialVelocities[0]);
+    glVertexPointer(3, GL_FLOAT, sizeof(btVector3), d->origins[0]);
+    glDrawArrays(GL_POINTS, 0, d->starCount);
+    cgGLDisableClientState(v0);
+    glDisableClientState(GL_VERTEX_ARRAY);
+#endif
 }

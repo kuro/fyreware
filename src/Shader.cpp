@@ -65,7 +65,7 @@ bool Shader::compileSourceFile (CGcontext context,
 {
     QFile dev (file);
     if (!dev.open(QIODevice::ReadOnly)) {
-        qWarning("%s", qPrintable(dev.errorString()));
+        qWarning("failed to open file: %s", qPrintable(dev.errorString()));
         return false;
     }
     return compileSourceCode(context, dev.readAll(), entryPoint);

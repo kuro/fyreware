@@ -1,14 +1,21 @@
 
+#define g float3(0.0, -9.806, 0.0)
+
 void main_vp (
     float4 mColor : COLOR,
     float4 mPos : POSITION,
+    float3 v0,
     uniform matrix mvp : state.matrix.mvp,
+    uniform float t,
     out float4 screenPos : POSITION,
     out float4 oColor : COLOR
     )
 {
     oColor = mColor;
-    screenPos = mul(mvp, mPos);
+
+    float3 p = mPos.xyz + v0 * t + g * 0.5 * t * t;
+
+    screenPos = mul(mvp, float4(p, 1.0));
 }
 
 float4 main_fp (
