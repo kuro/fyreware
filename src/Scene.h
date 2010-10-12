@@ -33,6 +33,8 @@ class QGestureEvent;
 class QPinchGesture;
 class QSwipeGesture;
 
+class ShaderProgram;
+
 class Scene : public QGLWidget
 {
     Q_OBJECT
@@ -42,6 +44,8 @@ public:
     virtual ~Scene ();
 
     btDynamicsWorld* dynamicsWorld () const;
+
+    ShaderProgram* shader (const QString& name) const;
 
 signals:
     void drawShells ();

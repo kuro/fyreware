@@ -92,6 +92,7 @@ struct Scene::Private
     ShaderProgram* skyShader;
     ShaderProgram* debugNormalsShader;
     ShaderProgram* fyreworksShader;
+    QHash<QString, QPointer<ShaderProgram> > shaders;
 
     QTime time;
     qreal dt;
@@ -129,6 +130,10 @@ struct Scene::Private
         spectrum[0].resize(spectrumLength);
         spectrum[1].resize(spectrumLength);
 
+        shaders.insert("sky", skyShader);
+        shaders.insert("debugNormals", debugNormalsShader);
+        shaders.insert("fyreworks", fyreworksShader);
+
         QMetaObject::connectSlotsByName(q);
     }
 };
@@ -158,6 +163,11 @@ Scene::Scene (QWidget* parent) :
 
 Scene::~Scene ()
 {
+}
+
+ShaderProgram* Scene::shader (const QString& name) const
+{
+    return d->shaders[name];
 }
 
 btDynamicsWorld* Scene::dynamicsWorld () const
