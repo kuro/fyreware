@@ -22,7 +22,6 @@ struct Cluster::Private
 {
     btVector3 origin;
     QVector<btVector3> initialVelocities;
-    QVector<btVector3> origins;
     qreal lifetime;
     qreal age;
     QHash<QString, btVector3> colorTable;
@@ -44,9 +43,6 @@ Cluster::Cluster (const btVector3& origin, QObject* parent) :
     d(new Private(origin, this))
 {
     setup();
-
-    // populate array of initial velocities
-    d->origins.fill(d->origin, d->initialVelocities.size());
 
     // color
     d->colorTable.insert("red"           , btVector3(1.0 , 0.0 , 0.0 ));
@@ -110,17 +106,16 @@ void Cluster::draw ()
     }
     glEnd();
 #else
-    glEnableClientState(GL_VERTEX_ARRAY);
     CGprogram prog = scene->shader("fyreworks")->program();
-    CGparameter v0 = cgGetNamedParameter(prog, "v0");
-    CGparameter t = cgGetNamedParameter(prog, "t");
+    CGparameter v0     = cgGetNamedParameter(prog, "v0");
+    CGparameter t      = cgGetNamedParameter(prog, "t");
+    CGparameter origin = cgGetNamedParameter(prog, "origin");
     cgGLEnableClientState(v0);
     cgGLSetParameter1f(t, d->age);
     cgGLSetParameterPointer(v0, 3, GL_FLOAT, sizeof(btVector3),
                             d->initialVelocities[0]);
-    glVertexPointer(3, GL_FLOAT, sizeof(btVector3), d->origins[0]);
+    cgGLSetParameter3fv(origin, d->origin);
     glDrawArrays(GL_POINTS, 0, d->starCount);
     cgGLDisableClientState(v0);
-    glDisableClientState(GL_VERTEX_ARRAY);
 #endif
 }
