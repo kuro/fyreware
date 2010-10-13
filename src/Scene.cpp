@@ -175,6 +175,11 @@ btDynamicsWorld* Scene::dynamicsWorld () const
     return d->dynamicsWorld;
 }
 
+Camera* Scene::camera () const
+{
+    return d->camera;
+}
+
 void Scene::initPhysics ()
 {
     qDebug() << "initializing physics";
@@ -236,6 +241,8 @@ void Scene::initializeGL ()
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+
+    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
     /// @todo remove the hard coded value
     loadCubeMap(QDir("Bridge.cubemap"));

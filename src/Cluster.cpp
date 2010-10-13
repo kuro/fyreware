@@ -9,6 +9,7 @@
 #include "defs.h"
 #include "Scene.h"
 #include "ShaderProgram.h"
+#include "Camera.h"
 
 #include <LinearMath/btVector3.h>
 
@@ -32,6 +33,7 @@ struct Cluster::Private
         CGparameter v0;
         CGparameter t;
         CGparameter origin;
+        CGparameter eye;
     } shader;
 
     Private (const btVector3& origin, Cluster* q) :
@@ -54,6 +56,7 @@ Cluster::Cluster (const btVector3& origin, QObject* parent) :
     d->shader.v0     = cgGetNamedParameter(prog, "v0");
     d->shader.t      = cgGetNamedParameter(prog, "t");
     d->shader.origin = cgGetNamedParameter(prog, "origin");
+    d->shader.eye    = cgGetNamedParameter(prog, "eye");
 
     // color
     d->colorTable.insert("red"           , btVector3(1.0 , 0.0 , 0.0 ));
@@ -112,6 +115,7 @@ void Cluster::draw ()
     cgGLSetParameterPointer(d->shader.v0, 3, GL_FLOAT, sizeof(btVector3),
                             d->initialVelocities[0]);
     cgGLSetParameter3fv(d->shader.origin, d->origin);
+    cgGLSetParameter3fv(d->shader.eye, scene->camera()->position());
     glDrawArrays(GL_POINTS, 0, d->starCount);
     cgGLDisableClientState(d->shader.v0);
 }
