@@ -261,6 +261,7 @@ void Scene::paintGL ()
     glLoadIdentity();
     gluPerspective(60.0, qreal(width())/height(), 1.0, 1000.0);
     d->camera->setMaxDistance(1000.0);
+    d->camera->setFocus(btVector3(0, 50, 0));
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -541,7 +542,7 @@ void Scene::drawSky ()
         glNewList(dlist, GL_COMPILE_AND_EXECUTE);
 
         GLUquadric* quadric = gluNewQuadric();
-        gluSphere(quadric, 1000.0, 3, 3);
+        gluSphere(quadric, 1000.0, 16, 16);
         gluDeleteQuadric(quadric);
 
         glEndList();
