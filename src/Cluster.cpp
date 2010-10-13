@@ -28,6 +28,12 @@ struct Cluster::Private
     btVector3 color;
     int starCount;
 
+    struct {
+        CGparameter v0;
+        CGparameter t;
+        CGparameter origin;
+    } shader;
+
     Private (const btVector3& origin, Cluster* q) :
         origin(origin),
         lifetime(10),
@@ -43,6 +49,11 @@ Cluster::Cluster (const btVector3& origin, QObject* parent) :
     d(new Private(origin, this))
 {
     setup();
+
+    CGprogram prog = scene->shader("fyreworks")->program();
+    d->shader.v0     = cgGetNamedParameter(prog, "v0");
+    d->shader.t      = cgGetNamedParameter(prog, "t");
+    d->shader.origin = cgGetNamedParameter(prog, "origin");
 
     // color
     d->colorTable.insert("red"           , btVector3(1.0 , 0.0 , 0.0 ));
@@ -96,26 +107,11 @@ void Cluster::draw ()
 {
     glColor3fv(d->color);
 
-#if 0
-    btVector3 g (0, -9.806, 0);
-    glBegin(GL_POINTS);
-    foreach (const btVector3& v0, d->initialVelocities) {
-        qreal& t = d->age;
-        btVector3 p = d->origin + v0 * t + g * 0.5 * t * t;
-        glVertex3f(p.x(), p.y(), p.z());
-    }
-    glEnd();
-#else
-    CGprogram prog = scene->shader("fyreworks")->program();
-    CGparameter v0     = cgGetNamedParameter(prog, "v0");
-    CGparameter t      = cgGetNamedParameter(prog, "t");
-    CGparameter origin = cgGetNamedParameter(prog, "origin");
-    cgGLEnableClientState(v0);
-    cgGLSetParameter1f(t, d->age);
-    cgGLSetParameterPointer(v0, 3, GL_FLOAT, sizeof(btVector3),
+    cgGLEnableClientState(d->shader.v0);
+    cgGLSetParameter1f(d->shader.t, d->age);
+    cgGLSetParameterPointer(d->shader.v0, 3, GL_FLOAT, sizeof(btVector3),
                             d->initialVelocities[0]);
-    cgGLSetParameter3fv(origin, d->origin);
+    cgGLSetParameter3fv(d->shader.origin, d->origin);
     glDrawArrays(GL_POINTS, 0, d->starCount);
-    cgGLDisableClientState(v0);
-#endif
+    cgGLDisableClientState(d->shader.v0);
 }
