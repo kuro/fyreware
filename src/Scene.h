@@ -64,7 +64,8 @@ private:
     void resizeGL (int w, int h);
     void paintGL ();
 
-    void drawScene ();
+    void drawSceneShells ();
+    void drawSceneClusters ();
     void drawSpectrum ();
     void drawSky ();
 

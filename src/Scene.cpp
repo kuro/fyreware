@@ -242,8 +242,6 @@ void Scene::initializeGL ()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-
     /// @todo remove the hard coded value
     loadCubeMap(QDir("Bridge.cubemap"));
 
@@ -269,8 +267,9 @@ void Scene::paintGL ()
 
     d->camera->invoke();
 
-    drawScene();
+    drawSceneShells();
     drawSky();
+    drawSceneClusters();
     drawSpectrum();
 
     GLuint gl_error = glGetError();
@@ -621,18 +620,41 @@ void Scene::swipeGesture (QSwipeGesture* swipe)
     Q_UNUSED(swipe);
 }
 
-void Scene::drawScene ()
+void Scene::drawSceneShells ()
 {
     d->debugNormalsShader->bind();
     emit drawShells();
     d->debugNormalsShader->release();
 
+    if (d->debugNormalsShader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();
+    }
+}
+
+void Scene::drawSceneClusters ()
+{
+    glPushAttrib(GL_ENABLE_BIT);
+
+    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_POINT_SPRITE);
+    glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+    glDepthMask(GL_FALSE);
+
     d->fyreworksShader->bind();
     emit drawClusters();
     d->fyreworksShader->release();
 
-    if (d->debugNormalsShader->error() != CG_NO_ERROR) {
-        qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();
+    glDepthMask(GL_TRUE);
+
+    glPopAttrib();
+
+    if (d->fyreworksShader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << d->fyreworksShader->errorString();
     }
 }
 

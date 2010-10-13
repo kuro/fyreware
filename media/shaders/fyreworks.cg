@@ -7,6 +7,7 @@ void main_vp (
     uniform float4 origin,
     uniform matrix mvp : state.matrix.mvp,
     uniform float t,
+    uniform float nt,
     uniform float3 eye,
     out float4 screenPos : POSITION,
     out float4 oColor : COLOR,
@@ -20,16 +21,21 @@ void main_vp (
     screenPos = mul(mvp, float4(p, 1.0));
 
     // point size
-    float a = 1.0;
+    float a = nt;
     float b = 0.12;
     float c = 0.01;
     float d = distance(p, eye);
     pointSize = clamp(256.0 * sqrt(1.0/(a+b*d + c*d*d)), 1.0, 128.0);
+
+    // use color alpha channel as a time based alpha fade
+    oColor.a = 1.0 - (nt * nt);
 }
 
 float4 main_fp (
-    float4 color : COLOR
+    float4 color : COLOR,
+    float2 texCoord : TEXCOORD0,
+    uniform sampler2D starTex : TEXUNIT0
     ) : COLOR
 {
-    return float4(color.xyz, 1.0);
+    return tex2D(starTex, texCoord) * color;
 }

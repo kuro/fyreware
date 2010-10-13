@@ -18,6 +18,8 @@ public:
     Cluster (const btVector3& origin, QObject* parent = NULL);
     virtual ~Cluster ();
 
+    void makeImage (int maxWidth);
+
     Q_INVOKABLE void emitStar (qreal vx, qreal vy, qreal vz);
 
 public slots:
