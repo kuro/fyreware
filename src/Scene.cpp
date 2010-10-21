@@ -35,6 +35,7 @@
 #include <QDir>
 #include <QWheelEvent>
 #include <QGesture>
+#include <QtConcurrentMap>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -43,6 +44,8 @@
 #include <LinearMath/btVector3.h>
 
 #include <btBulletDynamicsCommon.h>
+
+#define SKY_TEX_MAX_WIDTH 2048
 
 #define SPECTRUM_HEIGHT 1
 #define SPECTRUM_GENERATIONS 8
@@ -408,6 +411,36 @@ void Scene::drawSpectrum ()
 
 }
 
+struct ImageLoader
+{
+    typedef QList<QImage> result_type;
+
+    result_type operator() (const QString& path)
+    {
+        QImage img (path);
+
+        /// @bug verify image flipping
+#if 1
+        img = QGLWidget::convertToGLFormat(img);
+#else
+        img = img.rgbSwapped();
+#endif
+
+        QList<QImage> images;
+
+        for (int width = SKY_TEX_MAX_WIDTH; width > 0; width >>= 1)
+        {
+            img = img.scaled(width, width,
+                             Qt::IgnoreAspectRatio,
+                             Qt::FastTransformation
+                            );
+            images << img;
+        }
+
+        return images;
+    }
+};
+
 void Scene::loadCubeMap (const QDir& path)
 {
     glGenTextures(1, &d->cubeMapTex);
@@ -455,67 +488,39 @@ void Scene::loadCubeMap (const QDir& path)
      */
 
     // prep images
-    QImage posx (path.filePath("posx.jpg"));
-    QImage negx (path.filePath("negx.jpg"));
-    QImage posy (path.filePath("negy.jpg"));  // swapped neg y...
-    QImage negy (path.filePath("posy.jpg"));  // with the pos y here
-    QImage posz (path.filePath("posz.jpg"));
-    QImage negz (path.filePath("negz.jpg"));
+    QTime t0;
+    t0.start();
 
-    /// @bug verify image flipping
-#if 1
-    posx = convertToGLFormat(posx);
-    negx = convertToGLFormat(negx);
-    posy = convertToGLFormat(posy);
-    negy = convertToGLFormat(negy);
-    posz = convertToGLFormat(posz);
-    negz = convertToGLFormat(negz);
-#else
-    posx = posx.rgbSwapped();
-    negx = negx.rgbSwapped();
-    posy = posy.rgbSwapped();
-    negy = negy.rgbSwapped();
-    posz = posz.rgbSwapped();
-    negz = negz.rgbSwapped();
-#endif
+    QStringList imagePaths;
+    imagePaths
+        << path.filePath("posx.jpg") << path.filePath("negx.jpg")
+        << path.filePath("negy.jpg") << path.filePath("posy.jpg")
+        << path.filePath("posz.jpg") << path.filePath("negz.jpg")
+        ;
+    QFuture<QList<QImage> > future =
+        QtConcurrent::mapped(imagePaths, ImageLoader());
+    future.waitForFinished();
+    QList<QList<QImage> > images (future.results());
 
-    // transfer images
-    Qt::AspectRatioMode aspectRatioMode = Qt::IgnoreAspectRatio;
-    Qt::TransformationMode transformMode = Qt::SmoothTransformation;
-    for (int width = 2048, level = 0; width > 0; width >>= 1, level++) {
-        posx = posx.scaled(width, width, aspectRatioMode, transformMode);
-        negx = negx.scaled(width, width, aspectRatioMode, transformMode);
-        posy = posy.scaled(width, width, aspectRatioMode, transformMode);
-        negy = negy.scaled(width, width, aspectRatioMode, transformMode);
-        posz = posz.scaled(width, width, aspectRatioMode, transformMode);
-        negz = negz.scaled(width, width, aspectRatioMode, transformMode);
+    qDebug() << t0.restart() << "ms loading sky";
 
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, level, GL_RGBA,
-                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                     posx.bits()
-                    );
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, level, GL_RGBA,
-                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                     negx.bits()
-                    );
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, level, GL_RGBA,
-                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                     posy.bits()
-                    );
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, level, GL_RGBA,
-                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                     negy.bits()
-                    );
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, level, GL_RGBA,
-                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                     posz.bits()
-                    );
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, level, GL_RGBA,
-                     width, width, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                     negz.bits()
-                    );
+    // upload
+    int pos = 0;
+    int level;
+    foreach (const QList<QImage>& imageLevels, images) {
+        level = 0;
+        foreach (const QImage& img, imageLevels) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + pos, level, GL_RGBA,
+                         img.width(), img.height(),
+                         0, GL_RGBA, GL_UNSIGNED_BYTE,
+                         img.bits()
+                        );
+            level++;
+        }
+        pos++;
     }
 
+    qDebug() << t0.elapsed() << "ms uploading sky";
 }
 
 /**
