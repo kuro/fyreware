@@ -22,6 +22,7 @@ include_directories(
     ${QtFMOD_SOURCE_DIR}
     ${CG_INCLUDE_DIR}
     ${BULLET_INCLUDE_DIR}
+    ${GLEW_INCLUDE_DIR}
     )
 
 qt4_automoc(${source_files})

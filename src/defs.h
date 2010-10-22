@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <GL/glew.h>
 #include <math.h>
 #include <QDebug>
 #include <LinearMath/btVector3.h>

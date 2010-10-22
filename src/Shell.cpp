@@ -4,11 +4,12 @@
  * @brief Shell implementation
  */
 
+#include "defs.h"
+
 #include "Shell.moc"
 
 #include "Cluster.h"
 #include "Scene.h"
-#include "defs.h"
 
 #include <btBulletDynamicsCommon.h>
 

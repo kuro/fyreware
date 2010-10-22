@@ -19,9 +19,9 @@
  * @brief Scene implementation
  */
 
-#include "Scene.moc"
-
 #include "defs.h"
+
+#include "Scene.moc"
 
 #include "ShaderProgram.h"
 #include "OrbitalCamera.h"
