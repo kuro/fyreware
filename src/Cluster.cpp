@@ -19,8 +19,6 @@
 
 #include <Cg/cgGL.h>
 
-static GLuint starTex = 0;
-
 struct Cluster::Private
 {
     btVector3 origin;
@@ -53,9 +51,6 @@ Cluster::Cluster (const btVector3& origin, QObject* parent) :
     QObject(parent),
     d(new Private(origin, this))
 {
-    if (starTex == 0) {
-        makeImage(16);
-    }
     setup();
 
     CGprogram prog = scene->shader("fyreworks")->program();
@@ -81,48 +76,6 @@ Cluster::Cluster (const btVector3& origin, QObject* parent) :
 
 Cluster::~Cluster ()
 {
-}
-
-void Cluster::makeImage (int maxWidth)
-{
-    Q_ASSERT(starTex == 0);
-    glGenTextures(1, &starTex);
-    glBindTexture(GL_TEXTURE_2D, starTex);
-
-    QVector<float> img;
-    img.reserve(maxWidth * maxWidth);
-    for (int width = maxWidth, level = 0; width > 0; width>>=1, level++) {
-        img.resize(0);
-        qreal radius = width >> 1;
-        btVector3 center (radius, radius, 0.0f);
-        for (int y = 0; y < width; y++) {
-            for (int x = 0; x < width; x++) {
-                btVector3 p (x, y, 0.0f);
-                qreal distance = p.distance(center);
-                qreal zo = distance / radius;
-                img << (zo > 1.0 ? 0.0 : 1.0 - zo);
-            }
-        }
-
-        if (qFuzzyCompare(radius, 0.0)) {
-            img[0] = 1.0;
-        }
-
-        glTexImage2D(GL_TEXTURE_2D, level, GL_LUMINANCE,
-                     width, width, 0, GL_LUMINANCE, GL_FLOAT,
-                     img.data());
-
-#if 0
-        for (int y = 0; y < width; y++) {
-            for (int x = 0; x < width; x++) {
-                printf("%f ", img[x + y * width]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-#endif
-
-    }
 }
 
 void Cluster::setup ()

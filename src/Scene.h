@@ -57,6 +57,7 @@ signals:
 private:
     void loadSong (const QString& fileName);
     void loadCubeMap (const QDir& path);
+    void makeStarTex (int maxWidth);
 
     void initPhysics ();
 
