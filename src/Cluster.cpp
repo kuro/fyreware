@@ -87,7 +87,7 @@ void Cluster::setup ()
             randf(-10, 10)
             );
         direction = direction.normalize();
-        direction *= 10;
+        direction *= randf(9.5, 10.5);
         emitStar(direction.x(), direction.y(), direction.z());
     }
 }

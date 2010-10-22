@@ -48,6 +48,11 @@ Shell::Shell (QObject* parent) :
 
     d->shape->calculateLocalInertia(mass, inertia);
 
+    d->trx.setOrigin(btVector3(
+            randf(-50, 50),
+            0.0,
+            randf(-50, 50)));
+
     btRigidBody::btRigidBodyConstructionInfo conInfo (
         mass, this, d->shape, inertia);
 
@@ -58,9 +63,9 @@ Shell::Shell (QObject* parent) :
 
     // shooting for a height of about 100 meters
     d->rigidBody->applyCentralImpulse(btVector3(
-            randf(-10, 10),
+            randf(-20, 20),
             randf(60, 80),
-            randf(-10, 10)));
+            randf(-20, 20)));
 
     d->lifetime = randf(1.5, 2.0);
 
