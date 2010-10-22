@@ -26,6 +26,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QIcon>
+#include <QDateTime>
 
 static
 QIcon makeFireIcon ()
@@ -59,6 +60,10 @@ QIcon makeFireIcon ()
 int main(int argc, char *argv[])
 {
     QApplication app (argc, argv);
+
+    // randomness
+    qsrand(QDateTime::currentDateTime().toTime_t());
+    qrand();
 
     app.setOrganizationName("MentalDistortion");
     app.setApplicationName("FyreWare");
