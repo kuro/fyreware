@@ -67,3 +67,5 @@ QDebug operator<< (QDebug& d, const btVector3& v)
     d << str;
     return d;
 }
+
+#define showit(v) qDebug().nospace() << #v << ": " << v
