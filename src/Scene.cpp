@@ -36,6 +36,7 @@
 #include <QWheelEvent>
 #include <QGesture>
 #include <QtConcurrentMap>
+#include <QSplashScreen>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -71,6 +72,14 @@
         }                                                                   \
     } while (0)
 
+#define splashShowMessage(msg)                                              \
+    do {                                                                    \
+        qDebug() << msg;                                                    \
+        d->splash->showMessage(msg,                                         \
+                               Qt::AlignLeft|Qt::AlignBottom, Qt::cyan);    \
+        qApp->processEvents();                                              \
+    } while (0)
+
 QPointer<Scene> scene;
 
 struct Scene::Private
@@ -102,6 +111,8 @@ struct Scene::Private
     QTime time;
     qreal dt;
 
+    QSplashScreen* splash;
+
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
     btConstraintSolver* constraintSolver;
@@ -121,6 +132,7 @@ struct Scene::Private
         debugNormalsShader(new ShaderProgram(q)),
         fyreworksShader(new ShaderProgram(q)),
         dt(0.01),
+        splash(new QSplashScreen(QPixmap(":media/images/splash.png"))),
 
         dynamicsWorld(NULL),
         broadphaseInterface(NULL),
@@ -150,6 +162,11 @@ Scene::Scene (QWidget* parent) :
 {
     Q_ASSERT(scene.isNull());
     scene = this;
+
+    d->splash->show();
+    qApp->processEvents();
+
+    splashShowMessage("initializing...");
 
     connect(d->timer, SIGNAL(timeout()), d->fsys, SLOT(update()));
 
@@ -197,7 +214,7 @@ QSharedPointer<QtFMOD::Sound> Scene::sound (const QString& name) const
 
 void Scene::initSound ()
 {
-    qDebug() << "initializing sound";
+    splashShowMessage("sound...");
 
     // sound system
     d->fsys->init(32);
@@ -217,7 +234,8 @@ void Scene::initSound ()
 
 void Scene::initPhysics ()
 {
-    qDebug() << "initializing physics";
+    splashShowMessage("physics...");
+
     d->collisionConfiguration = new btDefaultCollisionConfiguration();
     Q_CHECK_PTR(d->collisionConfiguration);
 
@@ -270,12 +288,23 @@ void Scene::closeEvent (QCloseEvent* evt)
 
 void Scene::initializeGL ()
 {
-    qDebug() << "initializing graphics";
+    // when initializeGL takes too long, and processEvents is called,
+    // initializeGL gets called again
+    static bool glInitializing = false;
+    if (glInitializing) {
+        return;
+    } else {
+        glInitializing = true;
+    }
+
+    splashShowMessage("graphics...");
 
     qglClearColor("black");
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+
+    splashShowMessage("sky...");
 
     /// @todo remove the hard coded value
     loadCubeMap(QDir("Bridge.cubemap"));
@@ -283,6 +312,10 @@ void Scene::initializeGL ()
     makeStarTex(64);
 
     loadSong(qApp->arguments().last());
+
+    // remove splash screen
+    d->splash->finish(this);
+    d->splash->deleteLater();
 }
 
 void Scene::resizeGL (int w, int h)
@@ -515,7 +548,7 @@ struct ImageLoader
         {
             img = img.scaled(width, width,
                              Qt::IgnoreAspectRatio,
-                             Qt::FastTransformation
+                             Qt::SmoothTransformation
                             );
             images << img;
         }

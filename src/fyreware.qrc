@@ -6,5 +6,7 @@
     <file>../media/shaders/fyreworks.cg</file>
 
     <file>../media/sfx/explosion0.oga</file>
+
+    <file>../media/images/splash.png</file>
 </qresource>
 </RCC>
