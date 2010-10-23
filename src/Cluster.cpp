@@ -19,6 +19,10 @@
 
 #include <Cg/cgGL.h>
 
+#include <QtFMOD/System.h>
+#include <QtFMOD/Channel.h>
+#include <QtFMOD/Sound.h>
+
 struct Cluster::Private
 {
     btVector3 origin;
@@ -28,6 +32,8 @@ struct Cluster::Private
     QHash<QString, btVector3> colorTable;
     btVector3 color;
     int starCount;
+
+    QSharedPointer<QtFMOD::Channel> channel;
 
     struct {
         CGparameter v0;
@@ -72,6 +78,11 @@ Cluster::Cluster (const btVector3& origin, QObject* parent) :
 
     QList<btVector3> colors (d->colorTable.values());
     d->color = colors[floor(randf(colors.size()))];
+
+    // sound
+    scene->soundSystem()->playSound(
+        FMOD_CHANNEL_REUSE, scene->sound("explosion"), false, d->channel);
+    d->channel->set3DAttributes(d->origin);
 }
 
 Cluster::~Cluster ()

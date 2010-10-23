@@ -37,9 +37,12 @@ struct Camera::Private
     btVector3 position;
     btQuaternion orientation;
 
+    btVector3 prevPosition;
+
     Private (Camera* q) :
         position(0.0, 0.0, 0.0),
-        orientation(btQuaternion::getIdentity())
+        orientation(btQuaternion::getIdentity()),
+        prevPosition(position)
     {
         Q_UNUSED(q);
     }
@@ -67,6 +70,7 @@ btVector3 Camera::position () const
 
 void Camera::setPosition (const btVector3& position)
 {
+    d->prevPosition = d->position;
     d->position = position;
 }
 
@@ -83,6 +87,11 @@ btVector3 Camera::right () const
 btVector3 Camera::up () const
 {
     return quatRotate(d->orientation, btVector3(1, 0, 0));
+}
+
+btVector3 Camera::velocity () const
+{
+    return d->position - d->prevPosition;
 }
 
 void Camera::lookAt (const btVector3& p)

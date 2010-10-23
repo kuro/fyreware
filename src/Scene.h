@@ -36,6 +36,12 @@ class QSwipeGesture;
 class Camera;
 class ShaderProgram;
 
+namespace QtFMOD
+{
+class System;
+class Sound;
+}
+
 class Scene : public QGLWidget
 {
     Q_OBJECT
@@ -49,6 +55,9 @@ public:
     ShaderProgram* shader (const QString& name) const;
     Camera* camera () const;
 
+    QtFMOD::System* soundSystem () const;
+    QSharedPointer<QtFMOD::Sound> sound (const QString& name) const;
+
 signals:
     void drawShells ();
     void drawClusters ();
@@ -60,6 +69,7 @@ private:
     void makeStarTex (int maxWidth);
 
     void initPhysics ();
+    void initSound ();
 
     void initializeGL ();
     void resizeGL (int w, int h);

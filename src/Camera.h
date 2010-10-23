@@ -43,6 +43,8 @@ public:
     btVector3 right   () const;
     btVector3 up      () const;
 
+    btVector3 velocity () const;
+
     void lookAt (const btVector3& p);
 
     virtual void invoke ();

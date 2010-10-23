@@ -79,6 +79,7 @@ struct Scene::Private
 
     QTimer* timer;
     QtFMOD::System* fsys;
+    QHash<QString, QSharedPointer<QtFMOD::Sound> > sounds;
 
     QSharedPointer<QtFMOD::Channel> channel;
     QSharedPointer<QtFMOD::Sound> sound;
@@ -152,11 +153,7 @@ Scene::Scene (QWidget* parent) :
 
     connect(d->timer, SIGNAL(timeout()), d->fsys, SLOT(update()));
 
-    d->fsys->init(1);
-    fsysCheck();
-
-    d->timer->start(16);
-
+    initSound();
     initPhysics();
 
     grabGesture(Qt::TapGesture);
@@ -164,6 +161,9 @@ Scene::Scene (QWidget* parent) :
     grabGesture(Qt::PanGesture);
     grabGesture(Qt::PinchGesture);
     grabGesture(Qt::SwipeGesture);
+
+    // start simulation
+    d->timer->start(16);
 }
 
 Scene::~Scene ()
@@ -183,6 +183,36 @@ btDynamicsWorld* Scene::dynamicsWorld () const
 Camera* Scene::camera () const
 {
     return d->camera;
+}
+
+QtFMOD::System* Scene::soundSystem () const
+{
+    return d->fsys;
+}
+
+QSharedPointer<QtFMOD::Sound> Scene::sound (const QString& name) const
+{
+    return d->sounds[name];
+}
+
+void Scene::initSound ()
+{
+    qDebug() << "initializing sound";
+
+    // sound system
+    d->fsys->init(32);
+    fsysCheck();
+
+    d->fsys->set3DNumListeners(1);
+    d->fsys->set3DSettings(1.0f, 1.0f, 0.3f);
+
+    // sound effects
+    QSharedPointer<QtFMOD::Sound> sound (
+        d->fsys->createSound(":media/sfx/explosion0.oga", FMOD_3D)
+        );
+    fsysCheck();
+    d->sounds.insert("explosion", sound);
+    sound->set3DMinMaxDistance(150, 600);
 }
 
 void Scene::initPhysics ()
@@ -274,6 +304,13 @@ void Scene::paintGL ()
     glLoadIdentity();
 
     d->camera->invoke();
+    d->fsys->set3DListenerAttributes(
+        0,
+        d->camera->position(),
+        d->camera->velocity(),
+        d->camera->forward(),
+        d->camera->up()
+        );
 
     drawSceneShells();
     drawSky();
