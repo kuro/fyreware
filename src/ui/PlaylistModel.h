@@ -33,3 +33,5 @@ private:
     struct Private;
     QScopedPointer<Private> d;
 };
+
+#define FilterRole Qt::UserRole + 1

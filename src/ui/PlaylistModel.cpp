@@ -211,6 +211,12 @@ QVariant PlaylistModel::data (const QModelIndex& index, int role) const
         case Artist:
             return findTag(tags, d->artistTags);
         }
+    case FilterRole:
+        QString str;
+        str += findTag(tags, d->albumTags).toString();
+        str += findTag(tags, d->titleTags).toString();
+        str += findTag(tags, d->artistTags).toString();
+        return str;
     }
 
     return QVariant();

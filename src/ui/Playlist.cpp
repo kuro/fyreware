@@ -15,6 +15,8 @@
 #include <QUrl>
 #include <QDirIterator>
 #include <QDesktopServices>
+#include <QSortFilterProxyModel>
+
 #include <QtConcurrentRun>
 
 #include <boost/bind.hpp>
@@ -23,11 +25,18 @@ struct Playlist::Private
 {
     QList<QUrl> urls;
     PlaylistModel* model;
+    QSortFilterProxyModel* proxyModel;
     QStringList nameFilters;
 
     Private (Playlist* q) :
-        model(new PlaylistModel(urls, q))
+        model(new PlaylistModel(urls, q)),
+        proxyModel(new QSortFilterProxyModel(q))
     {
+        proxyModel->setSourceModel(model);
+        proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+        proxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
+        proxyModel->setFilterRole(FilterRole);
+
         nameFilters
             //<< "*.aif"
             //<< "*.aiff"
@@ -45,7 +54,7 @@ Playlist::Playlist (QWidget* parent) :
 #ifdef Q_OS_MAC
     //setWindowFlags(windowFlags() | Qt::Drawer);
 #endif
-    tableView->setModel(d->model);
+    tableView->setModel(d->proxyModel);
 
     addFile("http://server1.kawaii-radio.net:9000");
     addFile("http://knr128.keiichi.net");
@@ -53,6 +62,9 @@ Playlist::Playlist (QWidget* parent) :
     QtConcurrent::run(boost::bind(&Playlist::addDir, this,
                                   QDesktopServices::storageLocation(
                                       QDesktopServices::MusicLocation)));
+
+    connect(filterLineEdit, SIGNAL(textChanged(const QString&)),
+            d->proxyModel, SLOT(setFilterWildcard(const QString&)));
 }
 
 Playlist::~Playlist ()
