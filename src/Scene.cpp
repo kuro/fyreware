@@ -266,6 +266,8 @@ void Scene::initPhysics ()
 
 void Scene::initGui ()
 {
+    splashShowMessage("gui...");
+
     Playlist* playlist = new Playlist;
     playlist->show();
 }
