@@ -27,6 +27,8 @@
 #include "OrbitalCamera.h"
 #include "Shell.h"
 
+#include "ui/Playlist.h"
+
 #include <QTimer>
 #include <QCoreApplication>
 #include <QSettings>
@@ -172,6 +174,7 @@ Scene::Scene (QWidget* parent) :
 
     initSound();
     initPhysics();
+    initGui();
 
     grabGesture(Qt::TapGesture);
     grabGesture(Qt::TapAndHoldGesture);
@@ -259,6 +262,12 @@ void Scene::initPhysics ()
     d->dynamicsWorld->setInternalTickCallback(internalTickCallback, this);
 
     d->dynamicsWorld->setGravity(btVector3(0, -9.806, 0));
+}
+
+void Scene::initGui ()
+{
+    Playlist* playlist = new Playlist;
+    playlist->show();
 }
 
 void Scene::showEvent (QShowEvent* evt)
