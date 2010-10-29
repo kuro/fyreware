@@ -17,6 +17,9 @@ public:
     Playlist (QWidget* parent = NULL);
     virtual ~Playlist ();
 
+    void addDir (const QString& path);
+    Q_INVOKABLE void addFile (const QString& path);
+
     /**
      * @name drag and drop
      */

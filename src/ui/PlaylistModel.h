@@ -25,6 +25,8 @@ public:
     QVariant headerData (int section, Qt::Orientation orientation,
                          int role = Qt::DisplayRole) const;
     QVariant data (const QModelIndex& index, int role = Qt::DisplayRole) const;
+
+    bool insertRows (int row, int count, const QModelIndex& parent);
     //@}
 
 private:
