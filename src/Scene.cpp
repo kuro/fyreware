@@ -86,6 +86,9 @@ QPointer<Scene> scene;
 
 struct Scene::Private
 {
+    /// Flags helps to call processEvents without causing other problems
+    bool glInitializing;
+
     QSettings* settings;
 
     QTimer* timer;
@@ -122,6 +125,7 @@ struct Scene::Private
     btCollisionDispatcher* dispatcher;
 
     Private (Scene* q) :
+        glInitializing(false),
         settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
@@ -301,11 +305,10 @@ void Scene::initializeGL ()
 {
     // when initializeGL takes too long, and processEvents is called,
     // initializeGL gets called again
-    static bool glInitializing = false;
-    if (glInitializing) {
+    if (d->glInitializing) {
         return;
     } else {
-        glInitializing = true;
+        d->glInitializing = true;
     }
 
     splashShowMessage("graphics...");
@@ -323,6 +326,7 @@ void Scene::initializeGL ()
     makeStarTex(64);
 
     loadSong(qApp->arguments().last());
+    d->glInitializing = false;
 
     // remove splash screen
     d->splash->finish(this);
@@ -336,6 +340,10 @@ void Scene::resizeGL (int w, int h)
 
 void Scene::paintGL ()
 {
+    if (d->glInitializing) {
+        return;
+    }
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glMatrixMode(GL_PROJECTION);
