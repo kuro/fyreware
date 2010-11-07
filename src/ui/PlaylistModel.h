@@ -8,12 +8,17 @@
 
 #include <QAbstractTableModel>
 
+#include "SortedSet.h"
+
+class QSqlDatabase;
+
 class PlaylistModel : public QAbstractTableModel
 {
     Q_OBJECT
 
 public:
-    PlaylistModel (QList<QUrl>& urls, QObject* parent = NULL);
+    PlaylistModel (SortedSet<QUrl>& urls, QSqlDatabase& db,
+                   QObject* parent = NULL);
     virtual ~PlaylistModel ();
 
     /**
@@ -25,7 +30,6 @@ public:
     QVariant headerData (int section, Qt::Orientation orientation,
                          int role = Qt::DisplayRole) const;
     QVariant data (const QModelIndex& index, int role = Qt::DisplayRole) const;
-
     bool insertRows (int row, int count, const QModelIndex& parent);
     //@}
 

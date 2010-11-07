@@ -71,6 +71,7 @@ private:
     void initPhysics ();
     void initSound ();
     void initGui ();
+    void initFinal ();
 
     void initializeGL ();
     void resizeGL (int w, int h);

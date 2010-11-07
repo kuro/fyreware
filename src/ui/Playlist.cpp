@@ -8,6 +8,10 @@
  */
 
 #include "Playlist.moc"
+
+#include "SortedSet.h"
+#include "defs.h"
+#include "Scene.h"
 #include "PlaylistModel.h"
 
 #include <QDebug>
@@ -15,34 +19,55 @@
 #include <QUrl>
 #include <QDirIterator>
 #include <QDesktopServices>
+#include <QDateTime>
 #include <QSortFilterProxyModel>
+
+#include <QSqlDatabase>
+#include <QSqlRecord>
+#include <QSqlQuery>
+#include <QSqlError>
 
 #include <QtConcurrentRun>
 
 #include <boost/bind.hpp>
 
+#include <QtFMOD/System.h>
+#include <QtFMOD/Sound.h>
+#include <QtFMOD/Tag.h>
+
 struct Playlist::Private
 {
-    QList<QUrl> urls;
+    SortedSet<QUrl> urls;
+
+    QSqlDatabase db;
     PlaylistModel* model;
     QSortFilterProxyModel* proxyModel;
     QStringList nameFilters;
 
+    QStringList albumTags;
+    QStringList titleTags;
+    QStringList artistTags;
+
     Private (Playlist* q) :
-        model(new PlaylistModel(urls, q)),
+        db(QSqlDatabase::addDatabase("QPSQL")),
+        model(new PlaylistModel(urls, db, q)),
         proxyModel(new QSortFilterProxyModel(q))
     {
-        proxyModel->setSourceModel(model);
-        proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
-        proxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
-        proxyModel->setFilterRole(FilterRole);
-
         nameFilters
             //<< "*.aif"
             //<< "*.aiff"
             << "*.mp3"
             //<< "*.wav"
             ;
+
+        albumTags  << "ALBUM" << "TAL" << "icy-name";
+        titleTags  << "TITLE" << "TT2" << "icy-url";
+        artistTags << "ARTIST" << "TP1";
+
+        proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+        proxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
+        proxyModel->setFilterRole(FilterRole);
+        proxyModel->setSourceModel(model);
     }
 };
 
@@ -51,45 +76,224 @@ Playlist::Playlist (QWidget* parent) :
     d(new Private(this))
 {
     setupUi(this);
-#ifdef Q_OS_MAC
-    //setWindowFlags(windowFlags() | Qt::Drawer);
-#endif
+
+    initDb();
+
     tableView->setModel(d->proxyModel);
-
-    addFile("http://server1.kawaii-radio.net:9000");
-    addFile("http://knr128.keiichi.net");
-
-    QtConcurrent::run(boost::bind(&Playlist::addDir, this,
-                                  QDesktopServices::storageLocation(
-                                      QDesktopServices::MusicLocation)));
 
     connect(filterLineEdit, SIGNAL(textChanged(const QString&)),
             d->proxyModel, SLOT(setFilterWildcard(const QString&)));
+
+#ifdef Q_OS_MAC
+    //setWindowFlags(windowFlags() | Qt::Drawer);
+#endif
 }
 
 Playlist::~Playlist ()
 {
 }
 
-void Playlist::addDir (const QString& path)
+void Playlist::update ()
 {
-    QDirIterator dit (path, d->nameFilters, QDir::Files,
-                      QDirIterator::Subdirectories);
-    while (dit.hasNext()) {
-        dit.next();
-        metaObject()->invokeMethod(this, "addFile",
-                                   Q_ARG(QString, dit.filePath())
-                                   );
+    QSqlQuery q;
+    q.prepare("select url from streams order by url");
+    if (q.exec()) {
+        while (q.next()) {
+            QUrl url (q.value(0).toString());
+            d->urls << url;
+            d->model->insertRow(d->urls.indexOf(url));
+        }
+    }
+
+    QtConcurrent::run(boost::bind(&Playlist::scanDir, this,
+                                  QDesktopServices::storageLocation(
+                                      QDesktopServices::MusicLocation)));
+}
+
+void Playlist::initDb ()
+{
+    QDir dataDir (
+        QDesktopServices::storageLocation(QDesktopServices::DataLocation));
+    QDir::home().mkpath(dataDir.path());
+
+#if 0
+    d->db.setDatabaseName(dataDir.filePath("fyreware.db"));
+#else
+    d->db.setHostName("localhost");
+    d->db.setDatabaseName("fyreware");
+#endif
+
+    if (!d->db.open()) {
+        qFatal("failed to open database");
+    }
+
+    QSqlRecord record (d->db.record("streams"));
+    if (record.isEmpty()) {
+        QSqlQuery q;
+        q.exec(
+            "create table streams ("
+            "    url varchar primary key,"
+            "    album varchar,"
+            "    title varchar,"
+            "    artist varchar,"
+            "    createdAt timestamp,"
+            "    updatedAt timestamp"
+            ")"
+            );
     }
 }
 
-void Playlist::addFile (const QString& path)
+/**
+ * @warning Designed to run in separate thread.
+ */
+void Playlist::scanDir (const QString& path)
 {
-    int row = d->urls.size();
-    d->urls << path;
-    d->model->insertRow(row);
+    QScopedPointer<QtFMOD::System> fsys (new QtFMOD::System);
+    fsys->init(1);
+
+    QString connectionName ("tmp%0");
+    connectionName = connectionName.arg((quint64)QThread::currentThreadId());
+    {
+        QSqlDatabase db = QSqlDatabase::cloneDatabase(d->db, connectionName);
+        if (!db.open()) {
+            qFatal("failed to open database");
+        }
+
+        QDirIterator dit (path, d->nameFilters, QDir::Files,
+                          QDirIterator::Subdirectories);
+        while (dit.hasNext()) {
+            dit.next();
+            scanFile(dit.filePath(), db, fsys.data());
+        }
+
+        db.close();
+    }
+    QSqlDatabase::removeDatabase(connectionName);
 }
 
+static inline
+QVariant findTag (const QHash<QString, QtFMOD::Tag>& tags,
+                  const QStringList& names)
+{
+    foreach (const QString& tag, names) {
+        if (tags.contains(tag)) {
+            return tags[tag].value();
+        }
+    }
+    return QVariant();
+}
+
+/**
+ * @warning Designed to run in separate thread.
+ */
+void Playlist::scanFile (
+    const QString& path,
+    QSqlDatabase& db,
+    QtFMOD::System* fsys
+    )
+{
+    QSqlQuery q (db);
+
+    QUrl url (path);
+    QFileInfo fileInfo (path);
+
+    q.prepare("select updatedAt from streams where url = :url limit 1");
+    q.bindValue(":url", url.toString());
+    if (!q.exec()) {
+        qWarning() << q.lastError();
+        qWarning() << q.lastQuery();
+        return;
+    }
+
+    enum Op {
+        Skip,
+        Insert,
+        Update
+    };
+
+    Op op = Skip;
+
+    if (q.size() == 0) {
+        op = Insert;
+    } else {
+        q.first();
+        QDateTime updatedAt (q.value(0).toDateTime());
+        if (url.scheme().isEmpty()) {
+            // assuming it is a file
+            if (!fileInfo.exists()) {
+                qWarning() << path << "does not exist";
+                op = Skip;
+            } else if (updatedAt <= fileInfo.lastModified()) {
+                op = Skip;
+            } else {
+                op = Update;
+            }
+        } else {
+            Q_ASSERT(url.scheme() == "http");
+            op = Update;
+        }
+    }
+
+    if (op == Skip) {
+        return;
+    }
+
+    QSharedPointer<QtFMOD::Sound> sound (
+        fsys->createStream(path, FMOD_OPENONLY));
+
+    if (fsys->error() != FMOD_OK) {
+        qWarning() << "fmod failed to open" << path;
+        Q_ASSERT(sound->isNull());
+    } else {
+        Q_ASSERT(!sound.isNull());
+
+        QHash<QString, QtFMOD::Tag> tags (sound->tags());
+
+        switch (op) {
+        case Insert: {
+            q.prepare(
+                "insert into streams "
+                "(url, album, title, artist, createdAt, updatedAt) "
+                "values "
+                "(:url, :album, :title, :artist, :createdAt, :updatedAt)"
+                );
+            q.bindValue(":createdAt", QDateTime::currentDateTime());
+            break;
+        }
+        case Update: {
+            q.prepare(
+                "update streams set "
+                "album = :album "
+                "title = :title "
+                "artist = :artist "
+                "updatedAt = :updatedAt "
+                "where url = :url"
+                );
+            break;
+        }
+        default: {
+            qFatal("invalid op");
+            break;
+        }
+        }
+
+        q.bindValue(":url"   , url.toString());
+        q.bindValue(":album" , findTag(tags, d->albumTags));
+        q.bindValue(":title" , findTag(tags, d->titleTags));
+        q.bindValue(":artist", findTag(tags, d->artistTags));
+        q.bindValue(":updatedAt", fileInfo.lastModified());
+
+        if (!q.exec()) {
+            qWarning() << q.lastError();
+            qWarning() << q.lastQuery();
+        } else {
+            if (op == Insert) {
+                d->urls << url;
+                d->model->insertRow(d->urls.indexOf(url));
+            }
+        }
+    }
+}
 
 void Playlist::dragEnterEvent (QDragEnterEvent* evt)
 {
@@ -122,12 +326,6 @@ void Playlist::dragMoveEvent (QDragMoveEvent* evt)
 void Playlist::dropEvent (QDropEvent* evt)
 {
     if (evt->mimeData()->hasFormat("text/uri-list")) {
-
-        foreach (const QUrl& url, evt->mimeData()->urls()) {
-            qDebug() << url;
-            qDebug() << url.scheme();
-        }
-
         if (evt->source() == this) {
             evt->setDropAction(Qt::MoveAction);
             evt->accept();

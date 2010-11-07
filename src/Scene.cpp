@@ -117,6 +117,7 @@ struct Scene::Private
     qreal dt;
 
     QSplashScreen* splash;
+    Playlist* playlist;
 
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
@@ -139,6 +140,7 @@ struct Scene::Private
         fyreworksShader(new ShaderProgram(q)),
         dt(0.01),
         splash(new QSplashScreen(QPixmap(":media/images/splash.png"))),
+        playlist(new Playlist), // leak
 
         dynamicsWorld(NULL),
         broadphaseInterface(NULL),
@@ -268,12 +270,13 @@ void Scene::initPhysics ()
     d->dynamicsWorld->setGravity(btVector3(0, -9.806, 0));
 }
 
+//#include <QDockWidget>
 void Scene::initGui ()
 {
     splashShowMessage("gui...");
 
-    Playlist* playlist = new Playlist;
-    playlist->show();
+    //QDockWidget* playlistDock = new QDockWidget("Playlist", this);
+    //playlistDock->show();
 }
 
 void Scene::showEvent (QShowEvent* evt)
@@ -288,6 +291,8 @@ void Scene::showEvent (QShowEvent* evt)
     if (d->settings->value("scene/isFullScreen", false).toBool()) {
         setWindowState(Qt::WindowFullScreen);
     }
+
+    d->playlist->show();
 }
 
 void Scene::closeEvent (QCloseEvent* evt)
@@ -325,12 +330,16 @@ void Scene::initializeGL ()
 
     makeStarTex(64);
 
-    loadSong(qApp->arguments().last());
+    initFinal();
     d->glInitializing = false;
+}
 
+void Scene::initFinal ()
+{
     // remove splash screen
     d->splash->finish(this);
     d->splash->deleteLater();
+    metaObject()->invokeMethod(d->playlist, "update", Qt::QueuedConnection);
 }
 
 void Scene::resizeGL (int w, int h)

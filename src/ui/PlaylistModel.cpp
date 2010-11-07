@@ -9,13 +9,13 @@
 #include "PlaylistModel.moc"
 
 #include "Scene.h"
+#include "SortedSet.h"
 
-#include <QDebug>
 #include <QUrl>
+#include <QDebug>
 
-#include <QtFMOD/System.h>
-#include <QtFMOD/Sound.h>
-#include <QtFMOD/Tag.h>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 
 enum
 {
@@ -25,37 +25,39 @@ enum
     NbColumns
 };
 
+struct StreamInfo
+{
+    QString album;
+    QString title;
+    QString artist;
+};
+
 struct PlaylistModel::Private
 {
-    QList<QUrl>& urls;
-    QContiguousCache<QHash<QString, QVariant> > tagsCache;
+    SortedSet<QUrl>& urls;
+
+    QSqlDatabase db;
+    QContiguousCache<StreamInfo> tagsCache;
     int lookAhead, halfLookAhead;
-    int count;
 
-    QStringList albumTags;
-    QStringList titleTags;
-    QStringList artistTags;
-
-
-    Private (QList<QUrl>& urls) :
+    Private (SortedSet<QUrl>& urls, QSqlDatabase& db) :
         urls(urls),
-        tagsCache(1000),
-        lookAhead(16),
-        halfLookAhead(lookAhead >> 1),
-        count(0)
+        db(db),
+        tagsCache(10000),
+        lookAhead(100),
+        halfLookAhead(lookAhead >> 1)
     {
-        albumTags  << "ALBUM" << "TAL" << "icy-name";
-        titleTags  << "TITLE" << "TT2" << "icy-url";
-        artistTags << "ARTIST" << "TP1";
     }
 
-    QHash<QString, QVariant> fetchRow (int row);
+    StreamInfo fetchRow (int row);
     void cacheRows (int from, int to);
 };
 
-PlaylistModel::PlaylistModel (QList<QUrl>& urls, QObject* parent) :
+PlaylistModel::PlaylistModel (SortedSet<QUrl>& urls,
+                              QSqlDatabase& db,
+                              QObject* parent) :
     QAbstractTableModel(parent),
-    d(new Private(urls))
+    d(new Private(urls, db))
 {
 }
 
@@ -92,7 +94,7 @@ QVariant PlaylistModel::headerData (int section, Qt::Orientation orientation,
 
 int PlaylistModel::rowCount (const QModelIndex& parent) const
 {
-    return d->count;
+    return d->urls.size();
 }
 
 int PlaylistModel::columnCount (const QModelIndex& parent) const
@@ -100,54 +102,22 @@ int PlaylistModel::columnCount (const QModelIndex& parent) const
     return NbColumns;
 }
 
-static inline
-QVariant findTag (const QHash<QString, QVariant>& tags,
-                  const QStringList& names)
+StreamInfo PlaylistModel::Private::fetchRow (int row)
 {
-    foreach (const QString& tag, names) {
-        if (tags.contains(tag)) {
-            return tags[tag];
-        }
+    StreamInfo info;
+
+    QSqlQuery q;
+    q.prepare("select album, title, artist from streams where url = :url");
+    q.bindValue(":url", urls[row].toString());
+    if (!q.exec() || q.size() == 0) {
+        return info;
     }
-    return QVariant();
-}
+    q.first();
+    info.album  = q.value(0).toString();
+    info.title  = q.value(1).toString();
+    info.artist = q.value(2).toString();
 
-QHash<QString, QVariant> PlaylistModel::Private::fetchRow (int row)
-{
-    Q_ASSERT(row < urls.size());
-    const QUrl url (urls[row]);
-    qDebug() << row << url;
-
-    QtFMOD::System* fsys = scene->soundSystem();
-    Q_ASSERT(fsys);
-
-    if (fsys->error() != FMOD_OK) {
-        qWarning() << Q_FUNC_INFO << __LINE__ << fsys->errorString();
-    }
-
-    QString fname;
-    if (url.scheme() == "file") {
-        fname = url.path();
-    } else {
-        fname = url.toString();
-    }
-
-    QHash<QString, QVariant> retval;
-
-    QSharedPointer<QtFMOD::Sound> sound (fsys->createStream(fname, FMOD_3D));
-    if (fsys->error() != FMOD_OK) {
-        //qWarning() << Q_FUNC_INFO << __LINE__ << fsys->errorString();
-        Q_ASSERT(sound->isNull());
-    } else {
-        Q_ASSERT(!sound.isNull());
-        QHashIterator<QString, QtFMOD::Tag> it (sound->tags());
-        while (it.hasNext()) {
-            it.next();
-            retval.insert(it.key(), it.value().value());
-        }
-    }
-
-    return retval;
+    return info;
 }
 
 /**
@@ -155,8 +125,7 @@ QHash<QString, QVariant> PlaylistModel::Private::fetchRow (int row)
  */
 void PlaylistModel::Private::cacheRows (int from, int to)
 {
-
-    for (int i = from; i <= to; ++i) {
+    for (int i = from; i <= to; i++) {
         tagsCache.insert(i, fetchRow(i));
     }
 }
@@ -165,23 +134,15 @@ QVariant PlaylistModel::data (const QModelIndex& index, int role) const
 {
     int row = index.row();
 
-    if (row >= d->count) {
+    if (row >= d->urls.size()) {
         qWarning() << __LINE__ << "index is too large";
     }
 
     // update cache as necessary
-#if 0
-    while (row > d->tagsCache.lastIndex()) {
-        d->tagsCache.append(d->fetchRow(d->tagsCache.lastIndex() + 1));
-    }
-    while (row < d->tagsCache.firstIndex()) {
-        d->tagsCache.prepend(d->fetchRow(d->tagsCache.firstIndex() - 1));
-    }
-#else
     if (row > d->tagsCache.lastIndex()) {
         if (row - d->tagsCache.lastIndex() > d->lookAhead) {
             d->cacheRows(row - d->halfLookAhead,
-                         qMin(d->count - 1, row + d->halfLookAhead));
+                         qMin(d->urls.size() - 1, row + d->halfLookAhead));
         } else {
             while (row > d->tagsCache.lastIndex()) {
                 d->tagsCache.append(d->fetchRow(d->tagsCache.lastIndex()+1));
@@ -197,25 +158,24 @@ QVariant PlaylistModel::data (const QModelIndex& index, int role) const
             }
         }
     }
-#endif
 
     // generate data
-    const QHash<QString, QVariant> tags (d->tagsCache.at(row));
+    const StreamInfo& info (d->tagsCache.at(row));
     switch (role) {
     case Qt::DisplayRole:
         switch (index.column()) {
         case Album:
-            return findTag(tags, d->albumTags);
+            return info.album;
         case Title:
-            return findTag(tags, d->titleTags);
+            return info.title;
         case Artist:
-            return findTag(tags, d->artistTags);
+            return info.artist;
         }
     case FilterRole:
         QString str;
-        str += findTag(tags, d->albumTags).toString();
-        str += findTag(tags, d->titleTags).toString();
-        str += findTag(tags, d->artistTags).toString();
+        str += info.album;
+        str += info.title;
+        str += info.artist;
         return str;
     }
 
@@ -224,16 +184,10 @@ QVariant PlaylistModel::data (const QModelIndex& index, int role) const
 
 bool PlaylistModel::insertRows (int row, int count, const QModelIndex& parent)
 {
-    if (count != 1) {
-        qWarning() << "refusing to insert more than 1";
-        return false;
-    }
-    if (row != d->count) {
-        qWarning() << "refusing to perform an op other than append";
-        return false;
-    }
+    Q_ASSERT(count == 1);
+
     beginInsertRows(parent, row, row + count - 1);
-    d->count += count;
     endInsertRows();
+
     return true;
 }
