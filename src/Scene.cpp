@@ -28,6 +28,7 @@
 #include "Shell.h"
 
 #include "ui/Playlist.h"
+#include "ui/Player.h"
 
 #include <QTimer>
 #include <QCoreApplication>
@@ -117,7 +118,10 @@ struct Scene::Private
     qreal dt;
 
     QSplashScreen* splash;
+    QLayout* controlLayout;
+    QWidget* control;
     Playlist* playlist;
+    Player* player;
 
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
@@ -140,7 +144,10 @@ struct Scene::Private
         fyreworksShader(new ShaderProgram(q)),
         dt(0.01),
         splash(new QSplashScreen(QPixmap(":media/images/splash.png"))),
-        playlist(new Playlist), // leak
+        controlLayout(new QVBoxLayout(q)),
+        control(new QWidget), // leak
+        playlist(new Playlist(control)),
+        player(new Player(control)),
 
         dynamicsWorld(NULL),
         broadphaseInterface(NULL),
@@ -221,6 +228,16 @@ QSharedPointer<QtFMOD::Sound> Scene::sound (const QString& name) const
     return d->sounds[name];
 }
 
+QWeakPointer<QtFMOD::Sound> Scene::stream () const
+{
+    return d->sound;
+}
+
+QWeakPointer<QtFMOD::Channel> Scene::streamChannel () const
+{
+    return d->channel;
+}
+
 void Scene::initSound ()
 {
     splashShowMessage("sound...");
@@ -277,6 +294,10 @@ void Scene::initGui ()
 
     //QDockWidget* playlistDock = new QDockWidget("Playlist", this);
     //playlistDock->show();
+
+    d->control->setLayout(d->controlLayout);
+    d->controlLayout->addWidget(d->player);
+    d->controlLayout->addWidget(d->playlist);
 }
 
 void Scene::showEvent (QShowEvent* evt)
@@ -292,7 +313,7 @@ void Scene::showEvent (QShowEvent* evt)
         setWindowState(Qt::WindowFullScreen);
     }
 
-    d->playlist->show();
+    d->control->show();
 }
 
 void Scene::closeEvent (QCloseEvent* evt)

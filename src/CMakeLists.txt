@@ -20,6 +20,8 @@ set(source_files
     ui/Playlist.cpp
     ui/PlaylistModel.h
     ui/PlaylistModel.cpp
+    ui/Player.h
+    ui/Player.cpp
     )
 
 include_directories(
@@ -36,6 +38,7 @@ qt4_add_resources(resource_files
 
 qt4_wrap_ui(ui_files
     ui/Playlist.ui
+    ui/Player.ui
     )
 
 qt4_automoc(${source_files})

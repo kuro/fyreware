@@ -1,12 +1,10 @@
-<!DOCTYPE RCC>
-<RCC version="1.0">
-<qresource>
+<RCC>
+  <qresource>
+    <file>ui/player.svg</file>
     <file>../media/shaders/sky.cg</file>
     <file>../media/shaders/debugNormals.cg</file>
     <file>../media/shaders/fyreworks.cg</file>
-
     <file>../media/sfx/explosion0.oga</file>
-
     <file>../media/images/splash.png</file>
-</qresource>
+  </qresource>
 </RCC>

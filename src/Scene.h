@@ -40,6 +40,7 @@ namespace QtFMOD
 {
 class System;
 class Sound;
+class Channel;
 }
 
 class Scene : public QGLWidget
@@ -57,6 +58,9 @@ public:
 
     QtFMOD::System* soundSystem () const;
     QSharedPointer<QtFMOD::Sound> sound (const QString& name) const;
+
+    QWeakPointer<QtFMOD::Sound> stream () const;
+    QWeakPointer<QtFMOD::Channel> streamChannel () const;
 
 signals:
     void drawShells ();

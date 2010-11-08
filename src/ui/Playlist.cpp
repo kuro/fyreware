@@ -83,10 +83,6 @@ Playlist::Playlist (QWidget* parent) :
 
     connect(filterLineEdit, SIGNAL(textChanged(const QString&)),
             d->proxyModel, SLOT(setFilterWildcard(const QString&)));
-
-#ifdef Q_OS_MAC
-    //setWindowFlags(windowFlags() | Qt::Drawer);
-#endif
 }
 
 Playlist::~Playlist ()
