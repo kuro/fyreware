@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <QGLWidget>
+#include <QGraphicsScene>
 #include <QPointer>
 
 #include "Scene.h"
@@ -29,9 +29,9 @@
 #include <btBulletDynamicsCommon.h>
 
 class QDir;
-class QGestureEvent;
-class QPinchGesture;
-class QSwipeGesture;
+//class QGestureEvent;
+//class QPinchGesture;
+//class QSwipeGesture;
 
 class Camera;
 class ShaderProgram;
@@ -43,12 +43,12 @@ class Sound;
 class Channel;
 }
 
-class Scene : public QGLWidget
+class Scene : public QGraphicsScene
 {
     Q_OBJECT
 
 public:
-    Scene (QWidget* parent = NULL);
+    Scene ();
     virtual ~Scene ();
 
     btDynamicsWorld* dynamicsWorld () const;
@@ -74,27 +74,27 @@ private:
 
     void initPhysics ();
     void initSound ();
-    void initGui ();
     void initFinal ();
+    void initGraphics ();
 
-    void initializeGL ();
-    void resizeGL (int w, int h);
-    void paintGL ();
+    //void resizeEvent (QResizeEvent* evt);
+
+    void draw ();
 
     void drawSceneShells ();
     void drawSceneClusters ();
     void drawSpectrum ();
     void drawSky ();
 
-    void showEvent (QShowEvent* evt);
-    void closeEvent (QCloseEvent* evt);
+    //void showEvent (QShowEvent* evt);
+    //void closeEvent (QCloseEvent* evt);
 
-    void wheelEvent (QWheelEvent* evt);
+    //void wheelEvent (QWheelEvent* evt);
 
-    bool event (QEvent* evt);
-    bool gestureEvent (QGestureEvent* evt);
-    void pinchGesture (QPinchGesture* gesture);
-    void swipeGesture (QSwipeGesture* gesture);
+    //bool event (QEvent* evt);
+    //bool gestureEvent (QGestureEvent* evt);
+    //void pinchGesture (QPinchGesture* gesture);
+    //void swipeGesture (QSwipeGesture* gesture);
 
     void checkTags ();
     void analyzeSound ();
@@ -103,6 +103,8 @@ private:
 
     static void internalTickCallback (
         btDynamicsWorld* world, btScalar timeStep);
+
+    void drawBackground (QPainter* painter, const QRectF&);
 
 private slots:
     void on_timer_timeout ();

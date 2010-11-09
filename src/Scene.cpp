@@ -27,9 +27,7 @@
 #include "OrbitalCamera.h"
 #include "Shell.h"
 
-#include "ui/Playlist.h"
-#include "ui/Player.h"
-
+#include <QGLWidget>
 #include <QTimer>
 #include <QCoreApplication>
 #include <QSettings>
@@ -49,7 +47,7 @@
 
 #include <btBulletDynamicsCommon.h>
 
-#define SKY_TEX_MAX_WIDTH 2048
+#define SKY_TEX_MAX_WIDTH 1024
 
 #define SPECTRUM_HEIGHT 1
 #define SPECTRUM_GENERATIONS 8
@@ -87,9 +85,6 @@ QPointer<Scene> scene;
 
 struct Scene::Private
 {
-    /// Flags helps to call processEvents without causing other problems
-    bool glInitializing;
-
     QSettings* settings;
 
     QTimer* timer;
@@ -118,10 +113,6 @@ struct Scene::Private
     qreal dt;
 
     QSplashScreen* splash;
-    QLayout* controlLayout;
-    QWidget* control;
-    Playlist* playlist;
-    Player* player;
 
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
@@ -130,7 +121,6 @@ struct Scene::Private
     btCollisionDispatcher* dispatcher;
 
     Private (Scene* q) :
-        glInitializing(false),
         settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
@@ -143,11 +133,8 @@ struct Scene::Private
         debugNormalsShader(new ShaderProgram(q)),
         fyreworksShader(new ShaderProgram(q)),
         dt(0.01),
+
         splash(new QSplashScreen(QPixmap(":media/images/splash.png"))),
-        controlLayout(new QVBoxLayout(q)),
-        control(new QWidget), // leak
-        playlist(new Playlist(control)),
-        player(new Player(control)),
 
         dynamicsWorld(NULL),
         broadphaseInterface(NULL),
@@ -171,8 +158,8 @@ struct Scene::Private
     }
 };
 
-Scene::Scene (QWidget* parent) :
-    QGLWidget(parent),
+Scene::Scene () :
+    QGraphicsScene(),
     d(new Private(this))
 {
     Q_ASSERT(scene.isNull());
@@ -187,16 +174,19 @@ Scene::Scene (QWidget* parent) :
 
     initSound();
     initPhysics();
-    initGui();
+    initGraphics();
+    initFinal();
 
-    grabGesture(Qt::TapGesture);
-    grabGesture(Qt::TapAndHoldGesture);
-    grabGesture(Qt::PanGesture);
-    grabGesture(Qt::PinchGesture);
-    grabGesture(Qt::SwipeGesture);
+    //grabGesture(Qt::TapGesture);
+    //grabGesture(Qt::TapAndHoldGesture);
+    //grabGesture(Qt::PanGesture);
+    //grabGesture(Qt::PinchGesture);
+    //grabGesture(Qt::SwipeGesture);
 
     // start simulation
     d->timer->start(16);
+
+    loadSong("/Users/blanton/Music/Amazon MP3/Utada/Exodus/04 - The Workout.mp3");
 }
 
 Scene::~Scene ()
@@ -287,19 +277,7 @@ void Scene::initPhysics ()
     d->dynamicsWorld->setGravity(btVector3(0, -9.806, 0));
 }
 
-//#include <QDockWidget>
-void Scene::initGui ()
-{
-    splashShowMessage("gui...");
-
-    //QDockWidget* playlistDock = new QDockWidget("Playlist", this);
-    //playlistDock->show();
-
-    d->control->setLayout(d->controlLayout);
-    d->controlLayout->addWidget(d->player);
-    d->controlLayout->addWidget(d->playlist);
-}
-
+#if 0
 void Scene::showEvent (QShowEvent* evt)
 {
     Q_UNUSED(evt);
@@ -313,7 +291,7 @@ void Scene::showEvent (QShowEvent* evt)
         setWindowState(Qt::WindowFullScreen);
     }
 
-    d->control->show();
+    //d->control->show();
 }
 
 void Scene::closeEvent (QCloseEvent* evt)
@@ -326,20 +304,13 @@ void Scene::closeEvent (QCloseEvent* evt)
         d->settings->setValue("scene/pos", pos());
     }
 }
+#endif
 
-void Scene::initializeGL ()
+void Scene::initGraphics ()
 {
-    // when initializeGL takes too long, and processEvents is called,
-    // initializeGL gets called again
-    if (d->glInitializing) {
-        return;
-    } else {
-        d->glInitializing = true;
-    }
-
     splashShowMessage("graphics...");
 
-    qglClearColor("black");
+    glClearColor(0, 0, 0, 1);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -347,43 +318,45 @@ void Scene::initializeGL ()
     splashShowMessage("sky...");
 
     /// @todo remove the hard coded value
-    loadCubeMap(QDir("Bridge.cubemap"));
+    loadCubeMap(QDir("Vindelalven.cubemap"));
 
     makeStarTex(64);
-
-    initFinal();
-    d->glInitializing = false;
 }
 
 void Scene::initFinal ()
 {
     // remove splash screen
-    d->splash->finish(this);
+    //d->splash->finish(this);
     d->splash->deleteLater();
-    metaObject()->invokeMethod(d->playlist, "update", Qt::QueuedConnection);
 }
 
-void Scene::resizeGL (int w, int h)
+void Scene::drawBackground (QPainter* painter, const QRectF&)
 {
-    glViewport(0, 0, w, h);
-}
-
-void Scene::paintGL ()
-{
-    if (d->glInitializing) {
+    if (painter->paintEngine()->type() != QPaintEngine::OpenGL2) {
         return;
     }
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    qreal width  = painter->device()->width();
+    qreal height = painter->device()->height();
+    glViewport(0, 0, width, height);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60.0, qreal(width())/height(), 1.0, 1000.0);
+    gluPerspective(45.0, width/height, 1.0, 1000.0);
     d->camera->setMaxDistance(1000.0);
     d->camera->setFocus(btVector3(0, 50, 0));
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    draw();
+
+    //QTimer::singleShot(20, this, SLOT(update()));
+}
+
+void Scene::draw ()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     d->camera->invoke();
     d->fsys->set3DListenerAttributes(
@@ -429,7 +402,7 @@ void Scene::checkTags ()
             QString title (tr("%0 / %1 - FyreWare"));
             title = title.arg(tags["ARTIST"].value().toString());
             title = title.arg(tags["TITLE"].value().toString());
-            setWindowTitle(title);
+            //setWindowTitle(title);
         }
         qDebug();
     }
@@ -442,7 +415,7 @@ void Scene::checkTags ()
                 << qPrintable(tagIter.key()) << ": "
                 << qPrintable(tag.value().toString());
             if (tag.name() == "APIC") {
-                setWindowIcon(QPixmap::fromImage(tag.toImage()));
+                //setWindowIcon(QPixmap::fromImage(tag.toImage()));
             }
         }
     }
@@ -484,7 +457,8 @@ void Scene::on_timer_timeout ()
     // which eventually emits update signal
     d->dynamicsWorld->stepSimulation(d->dt);
 
-    updateGL();
+    //updateGL();
+    QGraphicsScene::update();
 }
 
 void Scene::drawSpectrum ()
@@ -517,14 +491,14 @@ void Scene::drawSpectrum ()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    qglColor("cyan");
+    glColor3f(0, 1, 1);
     glBegin(GL_LINE_STRIP);
     for (int i = 0; i < d->spectrumLength; i++) {
         glVertex2f(i, d->spectrum[0][i]);
     }
     glEnd();
 
-    qglColor("magenta");
+    glColor3f(1, 0, 0);
     glBegin(GL_LINE_STRIP);
     for (int i = 0; i < d->spectrumLength; i++) {
         /// @todo perfect horizontal alignment
@@ -728,6 +702,7 @@ void Scene::drawSky ()
     glPopAttrib();
 }
 
+#if 0
 void Scene::wheelEvent (QWheelEvent* evt)
 {
     qreal delta;
@@ -790,6 +765,7 @@ void Scene::swipeGesture (QSwipeGesture* swipe)
 {
     Q_UNUSED(swipe);
 }
+#endif
 
 void Scene::drawSceneShells ()
 {

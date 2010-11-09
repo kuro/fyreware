@@ -22,6 +22,9 @@ set(source_files
     ui/PlaylistModel.cpp
     ui/Player.h
     ui/Player.cpp
+
+    ui/GraphicsView.h
+    ui/GraphicsView.cpp
     )
 
 include_directories(

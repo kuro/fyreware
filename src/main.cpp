@@ -21,12 +21,24 @@
 
 #include "Scene.h"
 
+#include "ui/Playlist.h"
+#include "ui/Player.h"
+
 #include <QApplication>
+#include <QGLWidget>
 
 #include <QImage>
 #include <QPainter>
 #include <QIcon>
 #include <QDateTime>
+#include <QDialog>
+#include <QMainWindow>
+
+#include "ui/GraphicsView.h"
+
+#include <QGraphicsProxyWidget>
+#include <QGraphicsTextItem>
+#include <QDebug>
 
 static
 QIcon makeFireIcon ()
@@ -70,8 +82,40 @@ int main(int argc, char *argv[])
 
     QApplication::setWindowIcon(makeFireIcon());
 
+
+    GraphicsView* graphicsView = new GraphicsView;
+
+    QGLWidget* glWidget = new QGLWidget();
+    glWidget->makeCurrent();
+    graphicsView->setViewport(glWidget);
+
+    graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+    graphicsView->resize(900, 600);
+
     Scene scene;
-    scene.show();
+    graphicsView->setScene(&scene);
+    graphicsView->show();
+
+    QDialog* control = new QDialog(
+        NULL, Qt::CustomizeWindowHint|Qt::WindowTitleHint
+        );
+    control->setSizeGripEnabled(true);
+    control->setWindowOpacity(0.8);
+    control->setWindowTitle("Control");
+    control->setLayout(new QVBoxLayout);
+    Playlist* playlist (new Playlist(control));
+    QMetaObject::invokeMethod(playlist, "update", Qt::QueuedConnection);
+    Player* player (new Player(control));
+    control->layout()->addWidget(player);
+    control->layout()->addWidget(playlist);
+
+    QGraphicsProxyWidget* tmp = scene.addWidget(control, Qt::Window);
+
+
+    foreach (QGraphicsItem* item, scene.items()) {
+        item->setFlag(QGraphicsItem::ItemIsMovable);
+        item->setCacheMode(QGraphicsItem::DeviceCoordinateCache);
+    }
 
     return app.exec();
 }
