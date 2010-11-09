@@ -450,7 +450,7 @@ void Scene::checkTags ()
 
 void Scene::analyzeSound ()
 {
-    if (!d->channel) {
+    if (!d->channel || d->channel->paused()) {
         return;
     }
     qreal sum[2];
