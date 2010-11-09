@@ -49,7 +49,7 @@ struct Playlist::Private
     QStringList artistTags;
 
     Private (Playlist* q) :
-        db(QSqlDatabase::addDatabase("QPSQL")),
+        db(QSqlDatabase::addDatabase("QSQLITE")),
         model(new PlaylistModel(urls, db, q)),
         proxyModel(new QSortFilterProxyModel(q))
     {
@@ -112,12 +112,7 @@ void Playlist::initDb ()
         QDesktopServices::storageLocation(QDesktopServices::DataLocation));
     QDir::home().mkpath(dataDir.path());
 
-#if 0
     d->db.setDatabaseName(dataDir.filePath("fyreware.db"));
-#else
-    d->db.setHostName("localhost");
-    d->db.setDatabaseName("fyreware");
-#endif
 
     if (!d->db.open()) {
         qFatal("failed to open database");
