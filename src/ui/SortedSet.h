@@ -35,6 +35,7 @@ public:
     SortedSet& operator<< (const T& v)
     {
         map.insert(v, QHashDummyValue());
+        return *this;
     }
 
     inline
