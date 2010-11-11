@@ -18,6 +18,8 @@ set(source_files
 
     ui/Playlist.h
     ui/Playlist.cpp
+    ui/DirectoryScanner.h
+    ui/DirectoryScanner.cpp
     ui/PlaylistModel.h
     ui/PlaylistModel.cpp
     ui/Player.h
@@ -49,6 +51,7 @@ qt4_automoc(${source_files})
 add_executable(fyreware ${source_files} ${resource_files} ${ui_files})
 target_link_libraries(fyreware
     QtFMOD
+    ${GLEW_LIBRARY}
     ${FMOD_LIBRARY}
     ${QT_LIBRARIES}
     ${CG_LIBRARY}

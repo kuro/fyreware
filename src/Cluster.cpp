@@ -67,14 +67,14 @@ Cluster::Cluster (const btVector3& origin, QObject* parent) :
     d->shader.eye    = cgGetNamedParameter(prog, "eye");
 
     // color
-    d->colorTable.insert("red"           , btVector3(1.0 , 0.0 , 0.0 ));
-    d->colorTable.insert("orange"        , btVector3(1.0 , 0.6 , 0.0 ));
-    d->colorTable.insert("gold"          , btVector3(1.0 , 0.84, 0.0 ));
-    d->colorTable.insert("yellow"        , btVector3(1.0 , 1.0 , 0.0 ));
-    d->colorTable.insert("green"         , btVector3(0.0 , 1.0 , 0.0 ));
-    d->colorTable.insert("blue"          , btVector3(0.0 , 0.0 , 1.0 ));
-    d->colorTable.insert("purple"        , btVector3(0.50, 0.50, 0.0 ));
-    d->colorTable.insert("silver"        , btVector3(0.75, 0.75, 0.75));
+    d->colorTable.insert("red"           , btVector3(1.0f , 0.0f , 0.0f ));
+    d->colorTable.insert("orange"        , btVector3(1.0f , 0.6f , 0.0f ));
+    d->colorTable.insert("gold"          , btVector3(1.0f , 0.84f, 0.0f ));
+    d->colorTable.insert("yellow"        , btVector3(1.0f , 1.0f , 0.0f ));
+    d->colorTable.insert("green"         , btVector3(0.0f , 1.0f , 0.0f ));
+    d->colorTable.insert("blue"          , btVector3(0.0f , 0.0f , 1.0f ));
+    d->colorTable.insert("purple"        , btVector3(0.50f, 0.50f, 0.0f ));
+    d->colorTable.insert("silver"        , btVector3(0.75f, 0.75f, 0.75f));
 
     QList<btVector3> colors (d->colorTable.values());
     d->color = colors[floor(randf(colors.size()))];

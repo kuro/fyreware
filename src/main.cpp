@@ -26,6 +26,7 @@
 
 #include <QApplication>
 #include <QGLWidget>
+#include <QSplashScreen>
 
 #include <QImage>
 #include <QPainter>
@@ -83,38 +84,57 @@ int main(int argc, char *argv[])
     QApplication::setWindowIcon(makeFireIcon());
 
 
-    GraphicsView* graphicsView = new GraphicsView;
-
     QGLWidget* glWidget = new QGLWidget();
     glWidget->makeCurrent();
-    graphicsView->setViewport(glWidget);
 
-    graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-    graphicsView->resize(900, 600);
+    Scene* scene = new Scene;
 
-    Scene scene;
-    graphicsView->setScene(&scene);
-    graphicsView->show();
+    QScopedPointer<GraphicsView> view (new GraphicsView(scene));
+    scene->setParent(view.data());
+    view->setViewport(glWidget);
+    view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+    view->resize(900, 600);
+    view->show();
+
+    // splash image
+    QSplashScreen* splash;
+    splash = new QSplashScreen(QPixmap(":media/images/splash.png"));
+    QGraphicsProxyWidget* splashItem = scene->addWidget(splash);
+
+    QSize diff ((view->size() - splash->size()) / 2);
+    splashItem->setPos(diff.width(), diff.height());
+
+    QObject::connect(
+        scene, SIGNAL(statusMessage(const QString&, int, const QColor&)),
+        splash, SLOT(showMessage(const QString&, int, const QColor&)));
+
+    qApp->processEvents();  // make sure window is visible
+    scene->start();
+    splash->deleteLater();
 
     QDialog* control = new QDialog(
-        NULL, Qt::CustomizeWindowHint|Qt::WindowTitleHint
+        view.data(), Qt::CustomizeWindowHint|Qt::WindowTitleHint
         );
     control->setSizeGripEnabled(true);
     control->setWindowOpacity(0.8);
     control->setWindowTitle("Control");
     control->setLayout(new QVBoxLayout);
-    Playlist* playlist (new Playlist(control));
-    QMetaObject::invokeMethod(playlist, "update", Qt::QueuedConnection);
     Player* player (new Player(control));
     control->layout()->addWidget(player);
+    Playlist* playlist (new Playlist(control));
     control->layout()->addWidget(playlist);
 
-    QGraphicsProxyWidget* tmp = scene.addWidget(control, Qt::Window);
+    QGraphicsProxyWidget* controlItem =
+        scene->addWidget(control, Qt::Window);
 
-
-    foreach (QGraphicsItem* item, scene.items()) {
+    foreach (QGraphicsItem* item, scene->items()) {
         item->setFlag(QGraphicsItem::ItemIsMovable);
         item->setCacheMode(QGraphicsItem::DeviceCoordinateCache);
+    }
+
+    QMetaObject::invokeMethod(playlist, "update", Qt::QueuedConnection);
+    if (app.arguments().size() > 1) {
+        scene->loadSong(app.arguments().last());
     }
 
     return app.exec();

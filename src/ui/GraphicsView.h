@@ -13,7 +13,8 @@ class GraphicsView : public QGraphicsView
     Q_OBJECT
 
 public:
-    GraphicsView ();
+    GraphicsView (QGraphicsScene* scene);
+    virtual ~GraphicsView ();
 
 protected:
     void resizeEvent (QResizeEvent* evt);

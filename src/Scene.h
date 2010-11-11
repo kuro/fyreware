@@ -48,8 +48,10 @@ class Scene : public QGraphicsScene
     Q_OBJECT
 
 public:
-    Scene ();
+    Scene (QObject* parent = NULL);
     virtual ~Scene ();
+
+    void start ();
 
     btDynamicsWorld* dynamicsWorld () const;
 
@@ -62,19 +64,20 @@ public:
     QWeakPointer<QtFMOD::Sound> stream () const;
     QWeakPointer<QtFMOD::Channel> streamChannel () const;
 
+    void loadSong (const QString& fileName);
+
 signals:
     void drawShells ();
     void drawClusters ();
     void update (qreal dt);
+    void statusMessage (const QString&, int, const QColor&);
 
 private:
-    void loadSong (const QString& fileName);
     void loadCubeMap (const QDir& path);
     void makeStarTex (int maxWidth);
 
     void initPhysics ();
     void initSound ();
-    void initFinal ();
     void initGraphics ();
 
     //void resizeEvent (QResizeEvent* evt);

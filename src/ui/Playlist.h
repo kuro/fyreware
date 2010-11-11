@@ -7,7 +7,9 @@
 #pragma once
 
 #include <QWidget>
+#include <QDateTime>
 #include "ui_Playlist.h"
+#include "SortedSet.h"
 
 namespace QtFMOD
 {
@@ -15,6 +17,9 @@ class System;
 }
 
 class QSqlDatabase;
+
+class QAbstractItemModel;
+class QReadWriteLock;
 
 class Playlist : public QWidget, Ui::Playlist
 {
@@ -25,6 +30,9 @@ public:
     virtual ~Playlist ();
 
     Q_INVOKABLE void update ();
+
+    QSqlDatabase& db () const;
+    SortedSet<QUrl>& urls () const;
 
     /**
      * @name drag and drop
@@ -38,13 +46,8 @@ public:
 protected:
     void initDb ();
 
-    /**
-     * @name Threaded file scanning.
-     */
-    //@{
-    void scanDir (const QString& path);
-    void scanFile (const QString& path, QSqlDatabase& db, QtFMOD::System* fsys);
-    //@}
+    friend class DirectoryScanner;
+    QAbstractItemModel* model () const;
 
 private:
     struct Private;

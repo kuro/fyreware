@@ -8,11 +8,13 @@
 
 #include "PlaylistModel.moc"
 
+#include "Playlist.h"
 #include "Scene.h"
 #include "SortedSet.h"
 
 #include <QUrl>
 #include <QDebug>
+#include <QPointer>
 
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -34,15 +36,15 @@ struct StreamInfo
 
 struct PlaylistModel::Private
 {
+    QPointer<Playlist> playlist;
     SortedSet<QUrl>& urls;
 
-    QSqlDatabase db;
     QContiguousCache<StreamInfo> tagsCache;
     int lookAhead, halfLookAhead;
 
-    Private (SortedSet<QUrl>& urls, QSqlDatabase& db) :
+    Private (SortedSet<QUrl>& urls, Playlist* playlist) :
+        playlist(playlist),
         urls(urls),
-        db(db),
         tagsCache(10000),
         lookAhead(100),
         halfLookAhead(lookAhead >> 1)
@@ -54,10 +56,10 @@ struct PlaylistModel::Private
 };
 
 PlaylistModel::PlaylistModel (SortedSet<QUrl>& urls,
-                              QSqlDatabase& db,
-                              QObject* parent) :
-    QAbstractTableModel(parent),
-    d(new Private(urls, db))
+                              Playlist* playlist
+                              ) :
+    QAbstractTableModel(playlist),
+    d(new Private(urls, playlist))
 {
 }
 
@@ -106,13 +108,12 @@ StreamInfo PlaylistModel::Private::fetchRow (int row)
 {
     StreamInfo info;
 
-    QSqlQuery q;
+    QSqlQuery q (playlist->db());
     q.prepare("select album, title, artist from streams where url = :url");
     q.bindValue(":url", urls[row].toString());
-    if (!q.exec() || q.size() == 0) {
+    if (!q.exec() || !q.next()) {
         return info;
     }
-    q.first();
     info.album  = q.value(0).toString();
     info.title  = q.value(1).toString();
     info.artist = q.value(2).toString();

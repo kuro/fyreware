@@ -23,8 +23,8 @@
 
 #include <QObject>
 
-struct btVector3;
-struct btQuaternion;
+class btVector3;
+class btQuaternion;
 
 class Camera : public QObject
 {

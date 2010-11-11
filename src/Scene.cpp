@@ -37,7 +37,6 @@
 #include <QWheelEvent>
 #include <QGesture>
 #include <QtConcurrentMap>
-#include <QSplashScreen>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -55,7 +54,7 @@
 #define fsysCheck()                                                         \
     do {                                                                    \
         if (d->fsys->error() != FMOD_OK) {                                  \
-            qWarning() << d->fsys->errorString();                           \
+            qWarning() << Q_FUNC_INFO << __LINE__ << d->fsys->errorString();                           \
         }                                                                   \
     } while (0)
 
@@ -73,11 +72,19 @@
         }                                                                   \
     } while (0)
 
-#define splashShowMessage(msg)                                              \
+#define glCheck()                                                           \
+    do {                                                                    \
+        GLuint gl_error = glGetError();                                     \
+        if (gl_error != GL_NO_ERROR) {                                      \
+            qFatal("OpenGL Error [%s:%d]: %s\n",                            \
+                   Q_FUNC_INFO, __LINE__, gluErrorString(gl_error));        \
+        }                                                                   \
+    } while (0)
+
+#define sendStatusMessage(msg)                                              \
     do {                                                                    \
         qDebug() << msg;                                                    \
-        d->splash->showMessage(msg,                                         \
-                               Qt::AlignLeft|Qt::AlignBottom, Qt::cyan);    \
+        emit statusMessage(msg, Qt::AlignLeft, Qt::cyan);                   \
         qApp->processEvents();                                              \
     } while (0)
 
@@ -85,6 +92,7 @@ QPointer<Scene> scene;
 
 struct Scene::Private
 {
+    bool running;
     QSettings* settings;
 
     QTimer* timer;
@@ -112,8 +120,6 @@ struct Scene::Private
     QTime time;
     qreal dt;
 
-    QSplashScreen* splash;
-
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
     btConstraintSolver* constraintSolver;
@@ -121,6 +127,7 @@ struct Scene::Private
     btCollisionDispatcher* dispatcher;
 
     Private (Scene* q) :
+        running(false),
         settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
@@ -132,9 +139,7 @@ struct Scene::Private
         skyShader(new ShaderProgram(q)),
         debugNormalsShader(new ShaderProgram(q)),
         fyreworksShader(new ShaderProgram(q)),
-        dt(0.01),
-
-        splash(new QSplashScreen(QPixmap(":media/images/splash.png"))),
+        dt(0.016),
 
         dynamicsWorld(NULL),
         broadphaseInterface(NULL),
@@ -158,24 +163,28 @@ struct Scene::Private
     }
 };
 
-Scene::Scene () :
-    QGraphicsScene(),
+Scene::Scene (QObject* parent) :
+    QGraphicsScene(parent),
     d(new Private(this))
 {
     Q_ASSERT(scene.isNull());
     scene = this;
+}
 
-    d->splash->show();
-    qApp->processEvents();
+Scene::~Scene ()
+{
+}
 
-    splashShowMessage("initializing...");
+void Scene::start ()
+{
+    sendStatusMessage("initializing...");
 
     connect(d->timer, SIGNAL(timeout()), d->fsys, SLOT(update()));
 
     initSound();
     initPhysics();
     initGraphics();
-    initFinal();
+    d->running = true;
 
     //grabGesture(Qt::TapGesture);
     //grabGesture(Qt::TapAndHoldGesture);
@@ -184,13 +193,8 @@ Scene::Scene () :
     //grabGesture(Qt::SwipeGesture);
 
     // start simulation
-    d->timer->start(16);
-
-    loadSong("/Users/blanton/Music/Amazon MP3/Utada/Exodus/04 - The Workout.mp3");
-}
-
-Scene::~Scene ()
-{
+    d->time.start();
+    d->timer->start(10);
 }
 
 ShaderProgram* Scene::shader (const QString& name) const
@@ -230,7 +234,7 @@ QWeakPointer<QtFMOD::Channel> Scene::streamChannel () const
 
 void Scene::initSound ()
 {
-    splashShowMessage("sound...");
+    sendStatusMessage("sound...");
 
     // sound system
     d->fsys->init(32);
@@ -250,7 +254,7 @@ void Scene::initSound ()
 
 void Scene::initPhysics ()
 {
-    splashShowMessage("physics...");
+    sendStatusMessage("physics...");
 
     d->collisionConfiguration = new btDefaultCollisionConfiguration();
     Q_CHECK_PTR(d->collisionConfiguration);
@@ -274,7 +278,7 @@ void Scene::initPhysics ()
 
     d->dynamicsWorld->setInternalTickCallback(internalTickCallback, this);
 
-    d->dynamicsWorld->setGravity(btVector3(0, -9.806, 0));
+    d->dynamicsWorld->setGravity(btVector3(0.f, -9.806f, 0.f));
 }
 
 #if 0
@@ -306,28 +310,48 @@ void Scene::closeEvent (QCloseEvent* evt)
 }
 #endif
 
+static
+void loadShader (
+    ShaderProgram* shader,
+    const QString& file,
+    const QString& ventry,
+    const QString& fentry
+    )
+{
+    shader->addShaderFromSourceFile(CG_GL_VERTEX, file, ventry);
+    shader->addShaderFromSourceFile(CG_GL_FRAGMENT, file, fentry);
+    shader->link();
+    if (shader->error() != CG_NO_ERROR) {
+        qCritical() << Q_FUNC_INFO << shader->errorString();
+    }
+}
+
+/**
+ * @warning This has to wait until OpenGL is ready.
+ */
 void Scene::initGraphics ()
 {
-    splashShowMessage("graphics...");
+    sendStatusMessage("graphics...");
 
-    glClearColor(0, 0, 0, 1);
+    glCheck();
 
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
+    glewInit();
 
-    splashShowMessage("sky...");
+    // init shader
+    loadShader(d->skyShader, ":media/shaders/sky.cg",
+               "main_vp", "main_fp");
+    loadShader(d->debugNormalsShader, ":media/shaders/debugNormals.cg",
+               "main_vp", "main_fp");
+    loadShader(d->fyreworksShader, ":media/shaders/fyreworks.cg",
+               "main_vp", "main_fp");
 
+    sendStatusMessage("sky...");
     /// @todo remove the hard coded value
     loadCubeMap(QDir("Vindelalven.cubemap"));
 
     makeStarTex(64);
-}
 
-void Scene::initFinal ()
-{
-    // remove splash screen
-    //d->splash->finish(this);
-    d->splash->deleteLater();
+    glCheck();
 }
 
 void Scene::drawBackground (QPainter* painter, const QRectF&)
@@ -336,13 +360,18 @@ void Scene::drawBackground (QPainter* painter, const QRectF&)
         return;
     }
 
-    qreal width  = painter->device()->width();
-    qreal height = painter->device()->height();
-    glViewport(0, 0, width, height);
+    if (!d->running) {
+        return;
+    }
+
+    painter->beginNativePainting();
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, width/height, 1.0, 1000.0);
+    gluPerspective(45.0, qreal(width())/height(), 0.01, 1000.0);
     d->camera->setMaxDistance(1000.0);
     d->camera->setFocus(btVector3(0, 50, 0));
 
@@ -351,11 +380,12 @@ void Scene::drawBackground (QPainter* painter, const QRectF&)
 
     draw();
 
-    //QTimer::singleShot(20, this, SLOT(update()));
+    painter->endNativePainting();
 }
 
 void Scene::draw ()
 {
+    glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     d->camera->invoke();
@@ -372,11 +402,7 @@ void Scene::draw ()
     drawSceneClusters();
     drawSpectrum();
 
-    GLuint gl_error = glGetError();
-    if (gl_error != GL_NO_ERROR) {
-        qFatal("OpenGL Error: %s\n", gluErrorString(gl_error));
-    }
-
+    glCheck();
 }
 
 void Scene::loadSong (const QString& fileName)
@@ -448,7 +474,12 @@ void Scene::launch ()
 void Scene::on_timer_timeout ()
 {
     qreal realDt = 0.001 * d->time.restart();
-    expMovAvg(d->dt, realDt, 30);
+    expMovAvg(d->dt, realDt, 120);
+
+    QWidget* widget = qobject_cast<QWidget*>(parent());
+    if (widget) {
+        widget->setWindowTitle(tr("FyreWare (%0 fps)").arg(int(1.0/d->dt)));
+    }
 
     checkTags();
     analyzeSound();
@@ -593,34 +624,6 @@ void Scene::loadCubeMap (const QDir& path)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    // init shader
-    d->skyShader->addShaderFromSourceFile(
-        CG_GL_VERTEX, ":media/shaders/sky.cg", "main_vp");
-    d->skyShader->addShaderFromSourceFile(
-        CG_GL_FRAGMENT, ":media/shaders/sky.cg", "main_fp");
-    d->skyShader->link();
-    if (d->skyShader->error() != CG_NO_ERROR) {
-        qCritical() << Q_FUNC_INFO << d->skyShader->errorString();
-    }
-
-    d->debugNormalsShader->addShaderFromSourceFile(
-        CG_GL_VERTEX, ":media/shaders/debugNormals.cg", "main_vp");
-    d->debugNormalsShader->addShaderFromSourceFile(
-        CG_GL_FRAGMENT, ":media/shaders/debugNormals.cg", "main_fp");
-    d->debugNormalsShader->link();
-    if (d->debugNormalsShader->error() != CG_NO_ERROR) {
-        qCritical() << Q_FUNC_INFO << d->debugNormalsShader->errorString();
-    }
-
-    d->fyreworksShader->addShaderFromSourceFile(
-        CG_GL_VERTEX, ":media/shaders/fyreworks.cg", "main_vp");
-    d->fyreworksShader->addShaderFromSourceFile(
-        CG_GL_FRAGMENT, ":media/shaders/fyreworks.cg", "main_fp");
-    d->fyreworksShader->link();
-    if (d->fyreworksShader->error() != CG_NO_ERROR) {
-        qCritical() << Q_FUNC_INFO << d->fyreworksShader->errorString();
-    }
 
     /**
      * @bug Check this.  Using convertToGLFormat(), which flips in addition to rgb swapping.  Then, flipping x and y in the shader fragment's cube texture lookup.  And finally, swapped neg and pos y images.

@@ -6,13 +6,19 @@
 
 #include "GraphicsView.moc"
 
+#include "Scene.h"
+
 #include <QResizeEvent>
 
-GraphicsView::GraphicsView () :
-    QGraphicsView()
+GraphicsView::GraphicsView (QGraphicsScene* scene) :
+    QGraphicsView(scene)
 {
     setWindowTitle(tr("Fyreware"));
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+}
+
+GraphicsView::~GraphicsView ()
+{
 }
 
 void GraphicsView::resizeEvent (QResizeEvent* evt)
