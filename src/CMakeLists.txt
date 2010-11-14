@@ -51,7 +51,6 @@ qt4_automoc(${source_files})
 add_executable(fyreware ${source_files} ${resource_files} ${ui_files})
 target_link_libraries(fyreware
     QtFMOD
-    ${GLEW_LIBRARY}
     ${FMOD_LIBRARY}
     ${QT_LIBRARIES}
     ${CG_LIBRARY}

@@ -25,6 +25,7 @@
 
 struct ShaderProgram::Private
 {
+    bool linked;
     CGcontext context;
     CGprofile fragmentProfile;
     CGprogram program;
@@ -33,7 +34,8 @@ struct ShaderProgram::Private
 
     CGerror error;
 
-    Private (ShaderProgram* q)
+    Private (ShaderProgram* q) :
+        linked(false)
     {
         Q_UNUSED(q);
     }
@@ -48,6 +50,11 @@ ShaderProgram::ShaderProgram (QObject* parent) :
 
 ShaderProgram::~ShaderProgram ()
 {
+}
+
+bool ShaderProgram::isNull () const
+{
+    return !d->linked;
 }
 
 CGprogram ShaderProgram::program () const
@@ -106,6 +113,7 @@ bool ShaderProgram::link ()
         break;
     }
     cgGLLoadProgram(d->program);
+    d->linked = true;
     return true;
 }
 

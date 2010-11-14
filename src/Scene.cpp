@@ -37,6 +37,7 @@
 #include <QWheelEvent>
 #include <QGesture>
 #include <QtConcurrentMap>
+#include <QGLContext>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -92,7 +93,6 @@ QPointer<Scene> scene;
 
 struct Scene::Private
 {
-    bool running;
     QSettings* settings;
 
     QTimer* timer;
@@ -127,7 +127,6 @@ struct Scene::Private
     btCollisionDispatcher* dispatcher;
 
     Private (Scene* q) :
-        running(false),
         settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
@@ -184,7 +183,6 @@ void Scene::start ()
     initSound();
     initPhysics();
     initGraphics();
-    d->running = true;
 
     //grabGesture(Qt::TapGesture);
     //grabGesture(Qt::TapAndHoldGesture);
@@ -335,21 +333,21 @@ void Scene::initGraphics ()
 
     glCheck();
 
-    glewInit();
-
-    // init shader
-    loadShader(d->skyShader, ":media/shaders/sky.cg",
-               "main_vp", "main_fp");
-    loadShader(d->debugNormalsShader, ":media/shaders/debugNormals.cg",
-               "main_vp", "main_fp");
-    loadShader(d->fyreworksShader, ":media/shaders/fyreworks.cg",
-               "main_vp", "main_fp");
-
+    // sky
     sendStatusMessage("sky...");
     /// @todo remove the hard coded value
     loadCubeMap(QDir("Vindelalven.cubemap"));
+    loadShader(d->skyShader, ":media/shaders/sky.cg",
+               "main_vp", "main_fp");
 
+    // fyreworks
     makeStarTex(64);
+    loadShader(d->fyreworksShader, ":media/shaders/fyreworks.cg",
+               "main_vp", "main_fp");
+
+    // shells
+    loadShader(d->debugNormalsShader, ":media/shaders/debugNormals.cg",
+               "main_vp", "main_fp");
 
     glCheck();
 }
@@ -360,9 +358,7 @@ void Scene::drawBackground (QPainter* painter, const QRectF&)
         return;
     }
 
-    if (!d->running) {
-        return;
-    }
+    Q_ASSERT(QGLContext::currentContext()->isValid());
 
     painter->beginNativePainting();
 
@@ -486,7 +482,9 @@ void Scene::on_timer_timeout ()
 
     // calling stepSimulation eventually leads to internalTickCallback,
     // which eventually emits update signal
-    d->dynamicsWorld->stepSimulation(d->dt);
+    if (d->dynamicsWorld) {
+        d->dynamicsWorld->stepSimulation(d->dt);
+    }
 
     //updateGL();
     QGraphicsScene::update();
@@ -670,6 +668,10 @@ void Scene::loadCubeMap (const QDir& path)
  */
 void Scene::drawSky ()
 {
+    if (d->skyShader->isNull()) {
+        return;
+    }
+
     glPushAttrib(GL_ENABLE_BIT);
 
     glEnable(GL_TEXTURE_CUBE_MAP);
@@ -772,6 +774,10 @@ void Scene::swipeGesture (QSwipeGesture* swipe)
 
 void Scene::drawSceneShells ()
 {
+    if (d->debugNormalsShader->isNull()) {
+        return;
+    }
+
     d->debugNormalsShader->bind();
     emit drawShells();
     d->debugNormalsShader->release();
@@ -783,6 +789,10 @@ void Scene::drawSceneShells ()
 
 void Scene::drawSceneClusters ()
 {
+    if (d->fyreworksShader->isNull()) {
+        return;
+    }
+
     glPushAttrib(GL_ENABLE_BIT);
 
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);

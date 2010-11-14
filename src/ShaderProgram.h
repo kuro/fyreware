@@ -33,6 +33,8 @@ public:
     ShaderProgram (QObject* parent = NULL);
     virtual ~ShaderProgram ();
 
+    bool isNull() const;
+
     bool addShaderFromSourceCode (CGGLenum profileClass, const QString& code,
                                   const QString& entryPoint);
     bool addShaderFromSourceFile (CGGLenum profileClass, const QString& file,
