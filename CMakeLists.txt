@@ -20,4 +20,5 @@ endif ()
 subdirs(
     ext/qtfmod/src
     src
+    doc
     )
