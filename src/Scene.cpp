@@ -26,6 +26,7 @@
 #include "ShaderProgram.h"
 #include "OrbitalCamera.h"
 #include "Shell.h"
+#include "FPSGraph.h"
 
 #include <QGLWidget>
 #include <QTimer>
@@ -120,6 +121,8 @@ struct Scene::Private
     QTime time;
     qreal dt;
 
+    FPSGraph* fpsGraph;
+
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
     btConstraintSolver* constraintSolver;
@@ -139,6 +142,7 @@ struct Scene::Private
         debugNormalsShader(new ShaderProgram(q)),
         fyreworksShader(new ShaderProgram(q)),
         dt(0.016),
+        fpsGraph(new FPSGraph(QSizeF(120 * 1.5, 60), 120, 60, q)),
 
         dynamicsWorld(NULL),
         broadphaseInterface(NULL),
@@ -192,7 +196,7 @@ void Scene::start ()
 
     // start simulation
     d->time.start();
-    d->timer->start(10);
+    d->timer->start(16);
 }
 
 ShaderProgram* Scene::shader (const QString& name) const
@@ -397,6 +401,7 @@ void Scene::draw ()
     drawSky();
     drawSceneClusters();
     drawSpectrum();
+    d->fpsGraph->draw();
 
     glCheck();
 }
@@ -471,6 +476,7 @@ void Scene::on_timer_timeout ()
 {
     qreal realDt = 0.001 * d->time.restart();
     expMovAvg(d->dt, realDt, 120);
+    d->fpsGraph->addSample(realDt, d->dt);
 
     QWidget* widget = qobject_cast<QWidget*>(parent());
     if (widget) {

@@ -5,6 +5,8 @@ set(source_files
     Camera.cpp
     Cluster.h
     Cluster.cpp
+    FPSGraph.h
+    FPSGraph.cpp
     OrbitalCamera.h
     OrbitalCamera.cpp
     Scene.h
