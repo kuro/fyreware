@@ -18,7 +18,6 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif ()
 
 subdirs(
-    ext/qtfmod/src
     src
-    doc
+    #doc
     )
