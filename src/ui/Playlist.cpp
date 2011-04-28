@@ -15,6 +15,8 @@
 #include "PlaylistModel.h"
 #include "DirectoryScanner.h"
 
+#include <QtFMOD/Channel.h>
+
 #include <QDebug>
 #include <QDragEnterEvent>
 #include <QUrl>
@@ -29,15 +31,21 @@
 #include <QSqlQuery>
 #include <QSqlError>
 
+using namespace QtFMOD;
+
+QPointer<Playlist> playlist;
+
 struct Playlist::Private
 {
     SortedSet<QUrl> urls;
+    int current;
 
     QSqlDatabase db;
     PlaylistModel* model;
     QSortFilterProxyModel* proxyModel;
 
     Private (Playlist* q) :
+        current(-1),
         model(new PlaylistModel(urls, q)),
         proxyModel(new QSortFilterProxyModel(q))
     {
@@ -52,6 +60,9 @@ Playlist::Playlist (QWidget* parent) :
     QWidget(parent),
     d(new Private(this))
 {
+    Q_ASSERT(!playlist);
+    playlist = this;
+
     setupUi(this);
 
     initDb();
@@ -74,6 +85,29 @@ QSqlDatabase& Playlist::db () const
 SortedSet<QUrl>& Playlist::urls () const
 {
     return d->urls;
+}
+
+QUrl Playlist::current () const
+{
+    if (d->current < 0) {
+        d->current = 0;
+    }
+    if (d->current >= d->urls.size()) {
+        return QUrl();
+    }
+    return d->urls[d->current];
+}
+
+QUrl Playlist::advance (int offset) const
+{
+    d->current += offset;
+    if (d->current < 0) {
+        d->current = d->urls.size() - 1;
+    }
+    if (d->current >= d->urls.size()) {
+        d->current = 0;
+    }
+    return current();
 }
 
 QAbstractItemModel* Playlist::model () const
@@ -177,4 +211,31 @@ void Playlist::dropEvent (QDropEvent* evt)
     } else {
         evt->ignore();
     }
+}
+
+void Playlist::play ()
+{
+    scene->loadSong(current().toString());
+
+    QSharedPointer<Channel> channel (scene->streamChannel());
+    Q_ASSERT(channel);
+    connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
+}
+
+void Playlist::prev ()
+{
+    scene->loadSong(advance(-1).toString());
+
+    QSharedPointer<Channel> channel (scene->streamChannel());
+    Q_ASSERT(channel);
+    connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
+}
+
+void Playlist::next ()
+{
+    scene->loadSong(advance(1).toString());
+
+    //QSharedPointer<Channel> channel (scene->streamChannel());
+    //Q_ASSERT(channel);
+    //connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
 }

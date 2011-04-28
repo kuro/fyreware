@@ -9,6 +9,7 @@
 #include "Player.moc"
 
 #include "Scene.h"
+#include "Playlist.h"
 
 #include <QtFMOD/Channel.h>
 #include <QtFMOD/Sound.h>
@@ -169,12 +170,12 @@ void Player::on_volumeSlider_sliderPressed ()
 
 void Player::on_prevButton_pressed ()
 {
-    /// @todo implement me
+    playlist->prev();
 }
 
 void Player::on_nextButton_pressed ()
 {
-    /// @todo implement me
+    playlist->next();
 }
 
 void Player::on_playButton_pressed ()
@@ -184,7 +185,9 @@ void Player::on_playButton_pressed ()
         if (channel->isPlaying()) {
             channel->setPaused(!channel->paused());
         } else {
-            /// @todo implement me
+            playlist->play();
         }
+    } else {
+        playlist->play();
     }
 }

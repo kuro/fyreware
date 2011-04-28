@@ -148,7 +148,7 @@ void DirectoryScanner::scanFile (const QString& path)
             } else if (url.scheme() == "http") {
                 op = Update;
             } else {
-                qFatal("%s: oops");
+                qFatal("%s: oops", Q_FUNC_INFO);
             }
         }
     }

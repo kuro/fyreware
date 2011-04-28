@@ -8,6 +8,8 @@
 
 #include <QWidget>
 #include <QDateTime>
+#include <QPointer>
+
 #include "ui_Playlist.h"
 #include "SortedSet.h"
 
@@ -34,6 +36,9 @@ public:
     QSqlDatabase& db () const;
     SortedSet<QUrl>& urls () const;
 
+    QUrl current () const;
+    QUrl advance (int offset) const;
+
     /**
      * @name drag and drop
      */
@@ -42,6 +47,11 @@ public:
     void dragMoveEvent (QDragMoveEvent* evt);
     void dropEvent (QDropEvent* evt);
     //@}
+
+public slots:
+    void play ();
+    void next ();
+    void prev ();
 
 protected:
     void initDb ();
@@ -53,3 +63,5 @@ private:
     struct Private;
     QScopedPointer<Private> d;
 };
+
+extern QPointer<Playlist> playlist;

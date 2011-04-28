@@ -39,6 +39,7 @@
 #include <QGesture>
 #include <QtConcurrentMap>
 #include <QGLContext>
+#include <QUrl>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
