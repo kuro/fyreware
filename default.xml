@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote name="github-kuro" fetch="git://github.com/kuro" />
+
+  <default revision="master" remote="github-kuro" />
+
+  <project name="fyreware">
+    <copyfile src="root.cmake" dest="CMakeLists.txt" />
+  </project>
+  <project name="cmake-modules" />
+  <project name="qtfmod" />
+
+</manifest>
