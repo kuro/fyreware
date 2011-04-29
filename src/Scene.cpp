@@ -239,7 +239,13 @@ void Scene::initSound ()
 {
     sendStatusMessage("sound...");
 
-    // sound system
+#ifdef Q_OS_LINUX
+    d->fsys->setOutput(FMOD_OUTPUTTYPE_ALSA);
+#endif
+
+    fsysCheck();
+
+    // init sound system
     d->fsys->init(32);
     fsysCheck();
 

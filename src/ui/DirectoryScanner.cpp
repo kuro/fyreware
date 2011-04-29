@@ -70,6 +70,7 @@ DirectoryScanner::~DirectoryScanner ()
 void DirectoryScanner::run ()
 {
     d->fsys.reset(new QtFMOD::System);
+    d->fsys->setOutput(FMOD_OUTPUTTYPE_NOSOUND);
     d->fsys->init(1);
 
     QString connectionName ("DirectoryScanner%0");
