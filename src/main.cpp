@@ -21,7 +21,7 @@
 
 #include "Scene.h"
 
-#include "ui/Playlist.h"
+#include "ui/PlaylistWidget.h"
 #include "ui/Player.h"
 
 #include <QApplication>
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     control->setLayout(new QVBoxLayout);
     Player* player (new Player(control));
     control->layout()->addWidget(player);
-    Playlist* playlist (new Playlist(control));
+    PlaylistWidget* playlist (new PlaylistWidget(control));
     control->layout()->addWidget(playlist);
 
     QGraphicsProxyWidget* controlItem =

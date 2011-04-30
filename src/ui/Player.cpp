@@ -9,7 +9,7 @@
 #include "Player.moc"
 
 #include "Scene.h"
-#include "Playlist.h"
+#include "PlaylistWidget.h"
 
 #include <QtFMOD/Channel.h>
 #include <QtFMOD/Sound.h>

@@ -8,7 +8,7 @@
 
 #include "PlaylistModel.moc"
 
-#include "Playlist.h"
+#include "PlaylistWidget.h"
 #include "Scene.h"
 #include "SortedSet.h"
 
@@ -36,13 +36,13 @@ struct StreamInfo
 
 struct PlaylistModel::Private
 {
-    QPointer<Playlist> playlist;
+    QPointer<PlaylistWidget> playlist;
     SortedSet<QUrl>& urls;
 
     QContiguousCache<StreamInfo> tagsCache;
     int lookAhead, halfLookAhead;
 
-    Private (SortedSet<QUrl>& urls, Playlist* playlist) :
+    Private (SortedSet<QUrl>& urls, PlaylistWidget* playlist) :
         playlist(playlist),
         urls(urls),
         tagsCache(10000),
@@ -56,7 +56,7 @@ struct PlaylistModel::Private
 };
 
 PlaylistModel::PlaylistModel (SortedSet<QUrl>& urls,
-                              Playlist* playlist
+                              PlaylistWidget* playlist
                               ) :
     QAbstractTableModel(playlist),
     d(new Private(urls, playlist))

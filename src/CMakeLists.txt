@@ -18,8 +18,8 @@ set(source_files
     Shell.h
     Shell.cpp
 
-    ui/Playlist.h
-    ui/Playlist.cpp
+    ui/PlaylistWidget.h
+    ui/PlaylistWidget.cpp
     ui/DirectoryScanner.h
     ui/DirectoryScanner.cpp
     ui/PlaylistModel.h

@@ -12,7 +12,7 @@
 
 class QSqlDatabase;
 
-class Playlist;
+class PlaylistWidget;
 
 class PlaylistModel : public QAbstractTableModel
 {
@@ -20,7 +20,7 @@ class PlaylistModel : public QAbstractTableModel
 
 public:
     PlaylistModel (SortedSet<QUrl>& urls,
-                   Playlist* playlist
+                   PlaylistWidget* playlist
                    );
     virtual ~PlaylistModel ();
 

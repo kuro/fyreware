@@ -1,7 +1,7 @@
 
 /**
- * @file Playlist.h
- * @brief Playlist definition
+ * @file PlaylistWidget.h
+ * @brief PlaylistWidget definition
  */
 
 #pragma once
@@ -23,13 +23,13 @@ class QSqlDatabase;
 class QAbstractItemModel;
 class QReadWriteLock;
 
-class Playlist : public QWidget, Ui::Playlist
+class PlaylistWidget : public QWidget, Ui::Playlist
 {
     Q_OBJECT
 
 public:
-    Playlist (QWidget* parent = NULL);
-    virtual ~Playlist ();
+    PlaylistWidget (QWidget* parent = NULL);
+    virtual ~PlaylistWidget ();
 
     Q_INVOKABLE void update ();
 
@@ -64,4 +64,4 @@ private:
     QScopedPointer<Private> d;
 };
 
-extern QPointer<Playlist> playlist;
+extern QPointer<PlaylistWidget> playlist;

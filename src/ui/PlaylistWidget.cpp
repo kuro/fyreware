@@ -1,13 +1,13 @@
 
 /**
- * @file Playlist.cpp
- * @brief Playlist implementation
+ * @file PlaylistWidget.cpp
+ * @brief PlaylistWidget implementation
  *
  * @todo Load in background, notifying of changes.
  * @todo Use a database backend to avoid hitting fmod heavily.
  */
 
-#include "Playlist.moc"
+#include "PlaylistWidget.moc"
 
 #include "SortedSet.h"
 #include "defs.h"
@@ -33,9 +33,9 @@
 
 using namespace QtFMOD;
 
-QPointer<Playlist> playlist;
+QPointer<PlaylistWidget> playlist;
 
-struct Playlist::Private
+struct PlaylistWidget::Private
 {
     SortedSet<QUrl> urls;
     int current;
@@ -44,7 +44,7 @@ struct Playlist::Private
     PlaylistModel* model;
     QSortFilterProxyModel* proxyModel;
 
-    Private (Playlist* q) :
+    Private (PlaylistWidget* q) :
         current(-1),
         model(new PlaylistModel(urls, q)),
         proxyModel(new QSortFilterProxyModel(q))
@@ -56,7 +56,7 @@ struct Playlist::Private
     }
 };
 
-Playlist::Playlist (QWidget* parent) :
+PlaylistWidget::PlaylistWidget (QWidget* parent) :
     QWidget(parent),
     d(new Private(this))
 {
@@ -73,21 +73,21 @@ Playlist::Playlist (QWidget* parent) :
             d->proxyModel, SLOT(setFilterWildcard(const QString&)));
 }
 
-Playlist::~Playlist ()
+PlaylistWidget::~PlaylistWidget ()
 {
 }
 
-QSqlDatabase& Playlist::db () const
+QSqlDatabase& PlaylistWidget::db () const
 {
     return d->db;
 }
 
-SortedSet<QUrl>& Playlist::urls () const
+SortedSet<QUrl>& PlaylistWidget::urls () const
 {
     return d->urls;
 }
 
-QUrl Playlist::current () const
+QUrl PlaylistWidget::current () const
 {
     if (d->current < 0) {
         d->current = 0;
@@ -98,7 +98,7 @@ QUrl Playlist::current () const
     return d->urls[d->current];
 }
 
-QUrl Playlist::advance (int offset) const
+QUrl PlaylistWidget::advance (int offset) const
 {
     d->current += offset;
     if (d->current < 0) {
@@ -110,12 +110,12 @@ QUrl Playlist::advance (int offset) const
     return current();
 }
 
-QAbstractItemModel* Playlist::model () const
+QAbstractItemModel* PlaylistWidget::model () const
 {
     return d->model;
 }
 
-void Playlist::update ()
+void PlaylistWidget::update ()
 {
     QSqlQuery q;
     q.prepare("select url from streams order by url");
@@ -134,7 +134,7 @@ void Playlist::update ()
 
 }
 
-void Playlist::initDb ()
+void PlaylistWidget::initDb ()
 {
     QDir dataDir (
         QDesktopServices::storageLocation(QDesktopServices::DataLocation));
@@ -171,7 +171,7 @@ void Playlist::initDb ()
     }
 }
 
-void Playlist::dragEnterEvent (QDragEnterEvent* evt)
+void PlaylistWidget::dragEnterEvent (QDragEnterEvent* evt)
 {
     if (evt->mimeData()->hasFormat("text/uri-list")) {
         if (evt->source() == this) {
@@ -185,7 +185,7 @@ void Playlist::dragEnterEvent (QDragEnterEvent* evt)
     }
 }
 
-void Playlist::dragMoveEvent (QDragMoveEvent* evt)
+void PlaylistWidget::dragMoveEvent (QDragMoveEvent* evt)
 {
     if (evt->mimeData()->hasFormat("text/uri-list")) {
         if (evt->source() == this) {
@@ -199,7 +199,7 @@ void Playlist::dragMoveEvent (QDragMoveEvent* evt)
     }
 }
 
-void Playlist::dropEvent (QDropEvent* evt)
+void PlaylistWidget::dropEvent (QDropEvent* evt)
 {
     if (evt->mimeData()->hasFormat("text/uri-list")) {
         if (evt->source() == this) {
@@ -213,7 +213,7 @@ void Playlist::dropEvent (QDropEvent* evt)
     }
 }
 
-void Playlist::play ()
+void PlaylistWidget::play ()
 {
     scene->loadSong(current().toString());
 
@@ -222,7 +222,7 @@ void Playlist::play ()
     connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
 }
 
-void Playlist::prev ()
+void PlaylistWidget::prev ()
 {
     scene->loadSong(advance(-1).toString());
 
@@ -231,7 +231,7 @@ void Playlist::prev ()
     connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
 }
 
-void Playlist::next ()
+void PlaylistWidget::next ()
 {
     scene->loadSong(advance(1).toString());
 

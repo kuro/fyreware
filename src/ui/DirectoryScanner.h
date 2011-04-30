@@ -9,12 +9,12 @@
 #include <QRunnable>
 #include <QScopedPointer>
 
-class Playlist;
+class PlaylistWidget;
 
 class DirectoryScanner : public QRunnable
 {
 public:
-    DirectoryScanner (const QString& path, Playlist* playlist);
+    DirectoryScanner (const QString& path, PlaylistWidget* playlist);
     virtual ~DirectoryScanner ();
 
     virtual void run ();

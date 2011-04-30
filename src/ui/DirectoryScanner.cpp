@@ -6,7 +6,7 @@
 
 #include "DirectoryScanner.h"
 
-#include "Playlist.h"
+#include "PlaylistWidget.h"
 #include "defs.h"
 
 #include <QtFMOD/System.h>
@@ -27,7 +27,7 @@
 
 struct DirectoryScanner::Private
 {
-    QPointer<Playlist> playlist;
+    QPointer<PlaylistWidget> playlist;
     QString path;
     QStringList nameFilters;
 
@@ -39,7 +39,7 @@ struct DirectoryScanner::Private
 
     QSqlDatabase* db;
 
-    Private (const QString& path, Playlist* playlist) :
+    Private (const QString& path, PlaylistWidget* playlist) :
         path(path),
         playlist(playlist),
         db(NULL)
@@ -57,7 +57,7 @@ struct DirectoryScanner::Private
     }
 };
 
-DirectoryScanner::DirectoryScanner (const QString& path, Playlist* playlist) :
+DirectoryScanner::DirectoryScanner (const QString& path, PlaylistWidget* playlist) :
     QRunnable(),
     d(new Private(path, playlist))
 {
