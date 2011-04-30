@@ -346,8 +346,15 @@ void Scene::initGraphics ()
 
     // sky
     sendStatusMessage("sky...");
-    /// @todo remove the hard coded value
-    loadCubeMap(QDir("Vindelalven.cubemap"));
+
+    QDir dir (".");
+    dir.setNameFilters(QStringList()<<"*.cubemap");
+    QStringList cubemaps (dir.entryList());
+    if (!cubemaps.isEmpty()) {
+        QString cubemap (cubemaps[randi(cubemaps.size())]);
+        qDebug() << "loading cubemap" << cubemap;
+        loadCubeMap(QDir(cubemap));
+    }
     loadShader(d->skyShader, ":media/shaders/sky.cg",
                "main_vp", "main_fp");
 

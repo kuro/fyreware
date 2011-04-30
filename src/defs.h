@@ -59,6 +59,14 @@ qreal randf (qreal min, qreal max)
 }
 
 inline
+int randi (int max = 100)
+{
+    int retval = trunc(randf(max));
+    Q_ASSERT(retval < max);
+    return retval;
+}
+
+inline
 QDebug operator<< (QDebug& d, const btVector3& v)
 {
     QString str ("btVector3(%0, %1, %2)");
