@@ -22,8 +22,7 @@
 #include "Scene.h"
 #include "Playlist.h"
 
-#include "ui/PlaylistWidget.h"
-#include "ui/Player.h"
+#include "ui/ControlDialog.h"
 
 #include <QApplication>
 #include <QGLWidget>
@@ -100,7 +99,16 @@ int main(int argc, char *argv[])
 
     // splash image
     QSplashScreen* splash;
-    splash = new QSplashScreen(QPixmap(":media/images/splash.png"));
+
+    QPixmap splashPixmap (":media/images/splash.png");
+
+    splashPixmap = splashPixmap.scaled(
+        splashPixmap.size().boundedTo(view->size()),
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation
+        );
+
+    splash = new QSplashScreen(splashPixmap);
     QGraphicsProxyWidget* splashItem = scene->addWidget(splash);
 
     QSize diff ((view->size() - splash->size()) / 2);
@@ -114,27 +122,29 @@ int main(int argc, char *argv[])
     scene->start();
     splash->deleteLater();
 
-    QDialog* control = new QDialog(
-        view.data(), Qt::CustomizeWindowHint|Qt::WindowTitleHint
-        );
-    control->setSizeGripEnabled(true);
-    control->setWindowOpacity(0.8);
-    control->setWindowTitle("Control");
-    control->setLayout(new QVBoxLayout);
-    Player* player (new Player(control));
-    control->layout()->addWidget(player);
-    PlaylistWidget* playlistWidget (new PlaylistWidget(control));
-    control->layout()->addWidget(playlistWidget);
+    ControlDialog* control = new ControlDialog(view.data());
 
-    QGraphicsProxyWidget* controlItem =
-        scene->addWidget(control, Qt::Window);
+#if 0
+    // display control dialog as an external window
+    control->show();
+#else
+    // display control dialog within the scene
+    QGraphicsProxyWidget* controlItem
+        = scene->addWidget(control, Qt::Window);
+    // sometimes, the title bar gets hidden, which leaves me no way to move it
+    controlItem->setPos(
+        view->size().width() - control->size().width(),
+        view->size().height() - control->size().height()
+        );
+#endif
+
 
     foreach (QGraphicsItem* item, scene->items()) {
+        qDebug() << item;
         item->setFlag(QGraphicsItem::ItemIsMovable);
         item->setCacheMode(QGraphicsItem::DeviceCoordinateCache);
     }
 
-    QMetaObject::invokeMethod(playlistWidget, "update", Qt::QueuedConnection);
     if (app.arguments().size() > 1) {
         scene->loadSong(app.arguments().last());
     }

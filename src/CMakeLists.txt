@@ -28,6 +28,8 @@ set(source_files
     ui/PlaylistModel.cpp
     ui/Player.h
     ui/Player.cpp
+    ui/ControlDialog.h
+    ui/ControlDialog.cpp
 
     ui/GraphicsView.h
     ui/GraphicsView.cpp
