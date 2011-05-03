@@ -20,6 +20,7 @@
  */
 
 #include "Scene.h"
+#include "Playlist.h"
 
 #include "ui/PlaylistWidget.h"
 #include "ui/Player.h"
@@ -83,6 +84,7 @@ int main(int argc, char *argv[])
 
     QApplication::setWindowIcon(makeFireIcon());
 
+    Playlist playlist;
 
     QGLWidget* glWidget = new QGLWidget();
     glWidget->makeCurrent();
@@ -121,8 +123,8 @@ int main(int argc, char *argv[])
     control->setLayout(new QVBoxLayout);
     Player* player (new Player(control));
     control->layout()->addWidget(player);
-    PlaylistWidget* playlist (new PlaylistWidget(control));
-    control->layout()->addWidget(playlist);
+    PlaylistWidget* playlistWidget (new PlaylistWidget(control));
+    control->layout()->addWidget(playlistWidget);
 
     QGraphicsProxyWidget* controlItem =
         scene->addWidget(control, Qt::Window);
@@ -132,7 +134,7 @@ int main(int argc, char *argv[])
         item->setCacheMode(QGraphicsItem::DeviceCoordinateCache);
     }
 
-    QMetaObject::invokeMethod(playlist, "update", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(playlistWidget, "update", Qt::QueuedConnection);
     if (app.arguments().size() > 1) {
         scene->loadSong(app.arguments().last());
     }

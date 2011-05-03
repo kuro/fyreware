@@ -8,6 +8,7 @@
 
 #include "Player.moc"
 
+#include "../Playlist.h"
 #include "Scene.h"
 #include "PlaylistWidget.h"
 
@@ -64,6 +65,13 @@ Player::Player (QWidget* parent) :
     playButton->setIcon(d->playIcon);
 
     startTimer(100);
+
+    connect(prevButton, SIGNAL(pressed()),
+            playlist, SLOT(prev()));
+    connect(nextButton, SIGNAL(pressed()),
+            playlist, SLOT(next()));
+    connect(playButton, SIGNAL(pressed()),
+            playlist, SLOT(playPause()));
 }
 
 Player::~Player ()
@@ -166,28 +174,4 @@ void Player::on_timeSlider_sliderPressed ()
 void Player::on_volumeSlider_sliderPressed ()
 {
     on_volumeSlider_sliderMoved(volumeSlider->value());
-}
-
-void Player::on_prevButton_pressed ()
-{
-    playlist->prev();
-}
-
-void Player::on_nextButton_pressed ()
-{
-    playlist->next();
-}
-
-void Player::on_playButton_pressed ()
-{
-    QSharedPointer<Channel> channel (scene->streamChannel());
-    if (channel) {
-        if (channel->isPlaying()) {
-            channel->setPaused(!channel->paused());
-        } else {
-            playlist->play();
-        }
-    } else {
-        playlist->play();
-    }
 }

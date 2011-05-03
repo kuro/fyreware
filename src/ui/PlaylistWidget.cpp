@@ -9,44 +9,31 @@
 
 #include "PlaylistWidget.moc"
 
-#include "SortedSet.h"
+#include "Playlist.h"
 #include "defs.h"
-#include "Scene.h"
 #include "PlaylistModel.h"
 #include "DirectoryScanner.h"
 
-#include <QtFMOD/Channel.h>
-
 #include <QDebug>
 #include <QDragEnterEvent>
-#include <QUrl>
 #include <QDir>
 #include <QDesktopServices>
 #include <QSortFilterProxyModel>
 #include <QThreadPool>
-#include <QDateTime>
 
 #include <QSqlDatabase>
 #include <QSqlRecord>
 #include <QSqlQuery>
 #include <QSqlError>
 
-using namespace QtFMOD;
-
-QPointer<PlaylistWidget> playlist;
-
 struct PlaylistWidget::Private
 {
-    SortedSet<QUrl> urls;
-    int current;
-
     QSqlDatabase db;
     PlaylistModel* model;
     QSortFilterProxyModel* proxyModel;
 
     Private (PlaylistWidget* q) :
-        current(-1),
-        model(new PlaylistModel(urls, q)),
+        model(new PlaylistModel(q)),
         proxyModel(new QSortFilterProxyModel(q))
     {
         proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
@@ -60,9 +47,6 @@ PlaylistWidget::PlaylistWidget (QWidget* parent) :
     QWidget(parent),
     d(new Private(this))
 {
-    Q_ASSERT(!playlist);
-    playlist = this;
-
     setupUi(this);
 
     initDb();
@@ -71,48 +55,13 @@ PlaylistWidget::PlaylistWidget (QWidget* parent) :
 
     connect(filterLineEdit, SIGNAL(textChanged(const QString&)),
             d->proxyModel, SLOT(setFilterWildcard(const QString&)));
+
+    connect(playlist, SIGNAL(inserted(int)),
+            SLOT(playlist_inserted(int)));
 }
 
 PlaylistWidget::~PlaylistWidget ()
 {
-}
-
-QSqlDatabase& PlaylistWidget::db () const
-{
-    return d->db;
-}
-
-SortedSet<QUrl>& PlaylistWidget::urls () const
-{
-    return d->urls;
-}
-
-QUrl PlaylistWidget::current () const
-{
-    if (d->current < 0) {
-        d->current = 0;
-    }
-    if (d->current >= d->urls.size()) {
-        return QUrl();
-    }
-    return d->urls[d->current];
-}
-
-QUrl PlaylistWidget::advance (int offset) const
-{
-    d->current += offset;
-    if (d->current < 0) {
-        d->current = d->urls.size() - 1;
-    }
-    if (d->current >= d->urls.size()) {
-        d->current = 0;
-    }
-    return current();
-}
-
-QAbstractItemModel* PlaylistWidget::model () const
-{
-    return d->model;
 }
 
 void PlaylistWidget::update ()
@@ -122,16 +71,20 @@ void PlaylistWidget::update ()
     if (q.exec()) {
         while (q.next()) {
             QUrl url (q.value(0).toString());
-            d->urls << url;
-            d->model->insertRow(d->urls.indexOf(url));
+            playlist->insert(url);
         }
     }
 
     QThreadPool::globalInstance()->start(
         new DirectoryScanner(
             QDesktopServices::storageLocation(
-                QDesktopServices::MusicLocation), this));
+                QDesktopServices::MusicLocation), d->db));
 
+}
+
+void PlaylistWidget::playlist_inserted (int idx)
+{
+    d->model->insertRow(idx);
 }
 
 void PlaylistWidget::initDb ()
@@ -211,31 +164,4 @@ void PlaylistWidget::dropEvent (QDropEvent* evt)
     } else {
         evt->ignore();
     }
-}
-
-void PlaylistWidget::play ()
-{
-    scene->loadSong(current().toString());
-
-    QSharedPointer<Channel> channel (scene->streamChannel());
-    Q_ASSERT(channel);
-    connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
-}
-
-void PlaylistWidget::prev ()
-{
-    scene->loadSong(advance(-1).toString());
-
-    QSharedPointer<Channel> channel (scene->streamChannel());
-    Q_ASSERT(channel);
-    connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
-}
-
-void PlaylistWidget::next ()
-{
-    scene->loadSong(advance(1).toString());
-
-    //QSharedPointer<Channel> channel (scene->streamChannel());
-    //Q_ASSERT(channel);
-    //connect(channel.data(), SIGNAL(soundEnded()), SLOT(next()));
 }

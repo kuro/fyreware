@@ -26,6 +26,12 @@ public:
     }
 
     inline
+    bool isEmpty () const
+    {
+        return map.isEmpty();
+    }
+
+    inline
     int indexOf (const T& v) const
     {
         return map.keys().indexOf(v);
@@ -50,4 +56,9 @@ public:
         return map.keys()[index];
     }
 
+    inline
+    QList<T> toList () const
+    {
+        return map.keys();
+    }
 };

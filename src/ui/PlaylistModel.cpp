@@ -8,13 +8,14 @@
 
 #include "PlaylistModel.moc"
 
-#include "PlaylistWidget.h"
+#include "Playlist.h"
 #include "Scene.h"
 #include "SortedSet.h"
 
 #include <QUrl>
 #include <QDebug>
 #include <QPointer>
+#include <QMutexLocker>
 
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -36,15 +37,10 @@ struct StreamInfo
 
 struct PlaylistModel::Private
 {
-    QPointer<PlaylistWidget> playlist;
-    SortedSet<QUrl>& urls;
-
     QContiguousCache<StreamInfo> tagsCache;
     int lookAhead, halfLookAhead;
 
-    Private (SortedSet<QUrl>& urls, PlaylistWidget* playlist) :
-        playlist(playlist),
-        urls(urls),
+    Private () :
         tagsCache(10000),
         lookAhead(100),
         halfLookAhead(lookAhead >> 1)
@@ -55,11 +51,9 @@ struct PlaylistModel::Private
     void cacheRows (int from, int to);
 };
 
-PlaylistModel::PlaylistModel (SortedSet<QUrl>& urls,
-                              PlaylistWidget* playlist
-                              ) :
-    QAbstractTableModel(playlist),
-    d(new Private(urls, playlist))
+PlaylistModel::PlaylistModel (QObject* parent) :
+    QAbstractTableModel(parent),
+    d(new Private())
 {
 }
 
@@ -96,7 +90,7 @@ QVariant PlaylistModel::headerData (int section, Qt::Orientation orientation,
 
 int PlaylistModel::rowCount (const QModelIndex& parent) const
 {
-    return d->urls.size();
+    return playlist->size();
 }
 
 int PlaylistModel::columnCount (const QModelIndex& parent) const
@@ -108,9 +102,9 @@ StreamInfo PlaylistModel::Private::fetchRow (int row)
 {
     StreamInfo info;
 
-    QSqlQuery q (playlist->db());
+    QSqlQuery q;
     q.prepare("select album, title, artist from streams where url = :url");
-    q.bindValue(":url", urls[row].toString());
+    q.bindValue(":url", playlist->at(row).toString());
     if (!q.exec() || !q.next()) {
         return info;
     }
@@ -135,15 +129,15 @@ QVariant PlaylistModel::data (const QModelIndex& index, int role) const
 {
     int row = index.row();
 
-    if (row >= d->urls.size()) {
-        qWarning() << __LINE__ << "index is too large";
-    }
+//    if (row >= playlist->size()) {
+//        qWarning() << __LINE__ << "index is too large";
+//    }
 
     // update cache as necessary
     if (row > d->tagsCache.lastIndex()) {
         if (row - d->tagsCache.lastIndex() > d->lookAhead) {
             d->cacheRows(row - d->halfLookAhead,
-                         qMin(d->urls.size() - 1, row + d->halfLookAhead));
+                         qMin(playlist->size() - 1, row + d->halfLookAhead));
         } else {
             while (row > d->tagsCache.lastIndex()) {
                 d->tagsCache.append(d->fetchRow(d->tagsCache.lastIndex()+1));

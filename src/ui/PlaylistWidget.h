@@ -7,21 +7,8 @@
 #pragma once
 
 #include <QWidget>
-#include <QDateTime>
-#include <QPointer>
 
 #include "ui_Playlist.h"
-#include "SortedSet.h"
-
-namespace QtFMOD
-{
-class System;
-}
-
-class QSqlDatabase;
-
-class QAbstractItemModel;
-class QReadWriteLock;
 
 class PlaylistWidget : public QWidget, Ui::Playlist
 {
@@ -33,12 +20,6 @@ public:
 
     Q_INVOKABLE void update ();
 
-    QSqlDatabase& db () const;
-    SortedSet<QUrl>& urls () const;
-
-    QUrl current () const;
-    QUrl advance (int offset) const;
-
     /**
      * @name drag and drop
      */
@@ -48,20 +29,13 @@ public:
     void dropEvent (QDropEvent* evt);
     //@}
 
-public slots:
-    void play ();
-    void next ();
-    void prev ();
+private slots:
+    void playlist_inserted (int idx);
 
 protected:
     void initDb ();
-
-    friend class DirectoryScanner;
-    QAbstractItemModel* model () const;
 
 private:
     struct Private;
     QScopedPointer<Private> d;
 };
-
-extern QPointer<PlaylistWidget> playlist;

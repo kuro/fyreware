@@ -12,16 +12,12 @@
 
 class QSqlDatabase;
 
-class PlaylistWidget;
-
 class PlaylistModel : public QAbstractTableModel
 {
     Q_OBJECT
 
 public:
-    PlaylistModel (SortedSet<QUrl>& urls,
-                   PlaylistWidget* playlist
-                   );
+    PlaylistModel (QObject* parent = NULL);
     virtual ~PlaylistModel ();
 
     /**

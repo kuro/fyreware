@@ -4,10 +4,10 @@
  * @brief DirectoryScanner implementation
  */
 
-#include "DirectoryScanner.h"
+#include "DirectoryScanner.moc"
 
-#include "PlaylistWidget.h"
 #include "defs.h"
+#include "../Playlist.h"
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Sound.h>
@@ -27,8 +27,8 @@
 
 struct DirectoryScanner::Private
 {
-    QPointer<PlaylistWidget> playlist;
     QString path;
+    const QSqlDatabase& dbToClone;
     QStringList nameFilters;
 
     QStringList albumTags;
@@ -39,9 +39,9 @@ struct DirectoryScanner::Private
 
     QSqlDatabase* db;
 
-    Private (const QString& path, PlaylistWidget* playlist) :
+    Private (const QString& path, const QSqlDatabase& dbToClone) :
         path(path),
-        playlist(playlist),
+        dbToClone(dbToClone),
         db(NULL)
     {
         nameFilters
@@ -57,10 +57,14 @@ struct DirectoryScanner::Private
     }
 };
 
-DirectoryScanner::DirectoryScanner (const QString& path, PlaylistWidget* playlist) :
+DirectoryScanner::DirectoryScanner (const QString& path,
+                                    const QSqlDatabase& dbToClone) :
+    QObject(),
     QRunnable(),
-    d(new Private(path, playlist))
+    d(new Private(path, dbToClone))
 {
+    connect(this, SIGNAL(found(QUrl)),
+            playlist, SLOT(insert(QUrl)));
 }
 
 DirectoryScanner::~DirectoryScanner ()
@@ -77,7 +81,7 @@ void DirectoryScanner::run ()
     connectionName = connectionName.arg((quint64)this);
     {
         QSqlDatabase db (
-            QSqlDatabase::cloneDatabase(d->playlist->db(), connectionName));
+            QSqlDatabase::cloneDatabase(d->dbToClone, connectionName));
         if (!db.open()) {
             qCritical() << db.lastError();
             return;
@@ -87,7 +91,7 @@ void DirectoryScanner::run ()
                           QDirIterator::Subdirectories);
         while (dit.hasNext()) {
             dit.next();
-            if (!db.isOpen() || !d->playlist) {
+            if (!db.isOpen()) {
                 break;
             }
             scanFile(dit.filePath());
@@ -194,7 +198,6 @@ void DirectoryScanner::scanFile (const QString& path)
         }
         default: {
             qCritical("invalid op");
-            qApp->quit();
             break;
         }
         }
@@ -210,10 +213,8 @@ void DirectoryScanner::scanFile (const QString& path)
             qWarning() << Q_FUNC_INFO << __LINE__ << q.lastQuery();
             qWarning() << Q_FUNC_INFO << __LINE__ << q.lastError();
         } else {
-            if (op == Insert && d->playlist) {
-                d->playlist->urls() << url;
-                d->playlist->model()->insertRow(
-                    d->playlist->urls().indexOf(url));
+            if (op == Insert) {
+                emit found(url);
             }
         }
     }

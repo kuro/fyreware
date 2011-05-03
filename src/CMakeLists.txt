@@ -17,6 +17,8 @@ set(source_files
     Shader.cpp
     Shell.h
     Shell.cpp
+    Playlist.h
+    Playlist.cpp
 
     ui/PlaylistWidget.h
     ui/PlaylistWidget.cpp
