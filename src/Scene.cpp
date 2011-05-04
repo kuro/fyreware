@@ -215,6 +215,11 @@ Camera* Scene::camera () const
     return d->camera;
 }
 
+qreal Scene::dt () const
+{
+    return d->dt;
+}
+
 QtFMOD::System* Scene::soundSystem () const
 {
     return d->fsys;

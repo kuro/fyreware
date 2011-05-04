@@ -22,6 +22,10 @@ public:
     qreal altitude () const;
     qreal azimuth () const;
 
+    qreal& rdistance ();
+    qreal& raltitude ();
+    qreal& razimuth ();
+
     void setDistance (qreal distance);
     void setAltitude (qreal altitude);
     void setAzimuth (qreal azimuth);

@@ -58,6 +58,8 @@ public:
     ShaderProgram* shader (const QString& name) const;
     Camera* camera () const;
 
+    qreal dt () const;
+
     QtFMOD::System* soundSystem () const;
     QSharedPointer<QtFMOD::Sound> sound (const QString& name) const;
 

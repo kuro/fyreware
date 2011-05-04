@@ -16,6 +16,15 @@ public:
     GraphicsView (QGraphicsScene* scene);
     virtual ~GraphicsView ();
 
+    void mousePressEvent (QMouseEvent* evt);
+    void mouseMoveEvent (QMouseEvent* evt);
+    void mouseReleaseEvent (QMouseEvent* evt);
+    void wheelEvent (QWheelEvent* evt);
+
 protected:
     void resizeEvent (QResizeEvent* evt);
+
+private:
+    struct Private;
+    QScopedPointer<Private> d;
 };

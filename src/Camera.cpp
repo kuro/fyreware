@@ -21,6 +21,8 @@
 
 #include "Camera.moc"
 
+#include "defs.h"
+
 #include <LinearMath/btVector3.h>
 #include <LinearMath/btQuaternion.h>
 #include <LinearMath/btMatrix3x3.h>
@@ -37,11 +39,16 @@ struct Camera::Private
     btVector3 position;
     btQuaternion orientation;
 
+    btVector3 smoothedPosition;
+    btQuaternion smoothedOrientation;
+
     btVector3 prevPosition;
 
     Private (Camera* q) :
         position(0.0, 0.0, 0.0),
         orientation(btQuaternion::getIdentity()),
+        smoothedPosition(position),
+        smoothedOrientation(orientation),
         prevPosition(position)
     {
         Q_UNUSED(q);
@@ -112,7 +119,10 @@ void Camera::lookAt (const btVector3& p)
 
 void Camera::invoke ()
 {
-    btTransform xform (d->orientation, d->position);
+    expMovAvg(d->smoothedPosition   , d->position   , 8);
+    expMovAvg(d->smoothedOrientation, d->orientation, 8);
+
+    btTransform xform (d->smoothedOrientation, d->smoothedPosition);
     xform = xform.inverse();
     float m[16];
     xform.getOpenGLMatrix(m);

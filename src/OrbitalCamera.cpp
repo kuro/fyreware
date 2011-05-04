@@ -60,6 +60,21 @@ qreal OrbitalCamera::azimuth () const
     return d->azimuth;
 }
 
+qreal& OrbitalCamera::rdistance ()
+{
+    return d->distance;
+}
+
+qreal& OrbitalCamera::raltitude ()
+{
+    return d->altitude;
+}
+
+qreal& OrbitalCamera::razimuth ()
+{
+    return d->azimuth;
+}
+
 void OrbitalCamera::setDistance (qreal distance)
 {
     d->distance = qMax(1.0, distance);
