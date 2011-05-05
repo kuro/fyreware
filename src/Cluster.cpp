@@ -12,8 +12,6 @@
 #include "ShaderProgram.h"
 #include "Camera.h"
 
-#include <LinearMath/btVector3.h>
-
 #include <QVector>
 #include <QGLWidget>
 #include <QDebug>
@@ -52,8 +50,8 @@ struct Cluster::Private
         origin(origin),
         lifetime(4),
         age(0.0),
-        shellProgram(shellProgram),
-        starCount(0)
+        starCount(0),
+        shellProgram(shellProgram)
     {
         Q_UNUSED(q);
     }

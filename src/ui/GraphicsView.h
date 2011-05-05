@@ -24,6 +24,9 @@ public:
 protected:
     void resizeEvent (QResizeEvent* evt);
 
+    void showEvent (QShowEvent* evt);
+    void closeEvent (QCloseEvent* evt);
+
 private:
     struct Private;
     QScopedPointer<Private> d;

@@ -33,7 +33,6 @@
 #include <QGLWidget>
 #include <QTimer>
 #include <QCoreApplication>
-#include <QSettings>
 #include <QDebug>
 #include <QIcon>
 #include <QDir>
@@ -98,8 +97,6 @@ QPointer<Scene> scene;
 
 struct Scene::Private
 {
-    QSettings* settings;
-
     QTimer* timer;
     QtFMOD::System* fsys;
     QHash<QString, QSharedPointer<QtFMOD::Sound> > sounds;
@@ -138,7 +135,6 @@ struct Scene::Private
     btCollisionDispatcher* dispatcher;
 
     Private (Scene* q) :
-        settings(new QSettings(q)),
         timer(new QTimer(q)),
         fsys(new QtFMOD::System(q)),
         spectrumLength(256),
@@ -535,6 +531,8 @@ void Scene::checkTags ()
 static
 QScriptValue launchFun (QScriptContext* ctx, QScriptEngine* eng)
 {
+    Q_UNUSED(ctx);
+    Q_UNUSED(eng);
     scene->launch();
     return QScriptValue();
 }

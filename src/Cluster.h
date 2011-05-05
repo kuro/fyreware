@@ -9,9 +9,9 @@
 #include <QObject>
 #include <QMetaType>
 
-class QScriptProgram;
+#include <LinearMath/btVector3.h>
 
-class btVector3;
+class QScriptProgram;
 
 class Cluster : public QObject
 {

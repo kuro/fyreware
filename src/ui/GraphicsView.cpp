@@ -10,15 +10,18 @@
 #include "OrbitalCamera.h"
 
 #include <QResizeEvent>
+#include <QSettings>
 #include <QDebug>
 
 struct GraphicsView::Private
 {
+    QSettings* settings;
+
     QPoint lastPos;
 
-    Private (GraphicsView* q)
+    Private (GraphicsView* q) :
+        settings(new QSettings(q))
     {
-        Q_UNUSED(q);
     }
 };
 
@@ -32,6 +35,32 @@ GraphicsView::GraphicsView (QGraphicsScene* scene) :
 
 GraphicsView::~GraphicsView ()
 {
+}
+
+void GraphicsView::showEvent (QShowEvent* evt)
+{
+    Q_UNUSED(evt);
+
+    resize(d->settings->value("scene/size", QSize(600, 400)).toSize());
+    if (d->settings->contains("scene/pos")) {
+        move(d->settings->value("scene/pos").toPoint());
+    }
+
+    if (d->settings->value("scene/isFullScreen", false).toBool()) {
+        setWindowState(Qt::WindowFullScreen);
+    }
+}
+
+void GraphicsView::closeEvent (QCloseEvent* evt)
+{
+    Q_UNUSED(evt);
+
+    if (isFullScreen()) {
+        d->settings->setValue("scene/isFullScreen", true);
+    } else {
+        d->settings->setValue("scene/size", size());
+        d->settings->setValue("scene/pos", pos());
+    }
 }
 
 void GraphicsView::resizeEvent (QResizeEvent* evt)

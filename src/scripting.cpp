@@ -14,6 +14,8 @@
 static
 QScriptValue randFun (QScriptContext* ctx, QScriptEngine* eng)
 {
+    Q_UNUSED(eng);
+
     switch (ctx->argumentCount()) {
     case 1:
         return randf(ctx->argument(0).toNumber());

@@ -99,9 +99,6 @@ private:
     void drawSpectrum ();
     void drawSky ();
 
-    //void showEvent (QShowEvent* evt);
-    //void closeEvent (QCloseEvent* evt);
-
     //void wheelEvent (QWheelEvent* evt);
 
     //bool event (QEvent* evt);
