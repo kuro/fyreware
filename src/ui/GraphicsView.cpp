@@ -18,6 +18,7 @@ struct GraphicsView::Private
 
     Private (GraphicsView* q)
     {
+        Q_UNUSED(q);
     }
 };
 

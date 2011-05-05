@@ -27,6 +27,7 @@ struct Playlist::Private
     Private (Playlist* q) :
         current(-1)
     {
+        Q_UNUSED(q);
     }
 };
 

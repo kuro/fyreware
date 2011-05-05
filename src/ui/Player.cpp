@@ -100,6 +100,8 @@ QString timeToString (int msecs)
 
 void Player::timerEvent (QTimerEvent* evt)
 {
+    Q_UNUSED(evt);
+
     QSharedPointer<Sound> stream (scene->stream());
     QSharedPointer<Channel> channel (scene->streamChannel());
 

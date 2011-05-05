@@ -14,7 +14,7 @@ find_package(GLEW REQUIRED)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if (CMAKE_COMPILER_IS_GNUCC)
-    #add_definitions(-Wall -Werror -Wextra)
+    add_definitions(-Wall -Werror -Wextra)
 endif ()
 
 subdirs(

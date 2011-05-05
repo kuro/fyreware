@@ -90,11 +90,13 @@ QVariant PlaylistModel::headerData (int section, Qt::Orientation orientation,
 
 int PlaylistModel::rowCount (const QModelIndex& parent) const
 {
+    Q_UNUSED(parent);
     return playlist->size();
 }
 
 int PlaylistModel::columnCount (const QModelIndex& parent) const
 {
+    Q_UNUSED(parent);
     return NbColumns;
 }
 
