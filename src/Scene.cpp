@@ -40,6 +40,7 @@
 #include <QtConcurrentMap>
 #include <QGLContext>
 #include <QUrl>
+#include <QScriptEngine>
 
 #include <QtFMOD/System.h>
 #include <QtFMOD/Channel.h>
@@ -124,6 +125,9 @@ struct Scene::Private
 
     FPSGraph* fpsGraph;
 
+    QScriptEngine* scriptEngine;
+    QHash<QString, QScriptProgram> shellPrograms;
+
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
     btConstraintSolver* constraintSolver;
@@ -144,6 +148,7 @@ struct Scene::Private
         fyreworksShader(new ShaderProgram(q)),
         dt(0.016),
         fpsGraph(new FPSGraph(QSizeF(120 * 1.5, 60), 120, 60, q)),
+        scriptEngine(new QScriptEngine(q)),
 
         dynamicsWorld(NULL),
         broadphaseInterface(NULL),
@@ -187,6 +192,7 @@ void Scene::start ()
 
     initSound();
     initPhysics();
+    initScripting();
     initGraphics();
 
     //grabGesture(Qt::TapGesture);
@@ -218,6 +224,11 @@ Camera* Scene::camera () const
 qreal Scene::dt () const
 {
     return d->dt;
+}
+
+QScriptEngine* Scene::scriptEngine () const
+{
+    return d->scriptEngine;
 }
 
 QtFMOD::System* Scene::soundSystem () const
@@ -293,6 +304,32 @@ void Scene::initPhysics ()
     d->dynamicsWorld->setInternalTickCallback(internalTickCallback, this);
 
     d->dynamicsWorld->setGravity(btVector3(0.f, -9.806f, 0.f));
+}
+
+void Scene::initScripting ()
+{
+    sendStatusMessage("scripting...");
+
+    QDir::addSearchPath("scripts", ".");
+    QDir dir ("scripts:");
+    dir.setNameFilters(QStringList()<<"*.shell");
+    QStringList shells (dir.entryList());
+    foreach (const QString& file, dir.entryList()) {
+        QFileInfo fi (file);
+        qDebug() << "loading shell" << fi.baseName();
+        QFile dev (file);
+        if (!dev.open(QIODevice::ReadOnly)) {
+            qWarning() << Q_FUNC_INFO << dev.errorString();
+            continue;
+        }
+        QScriptProgram program (dev.readAll(), dev.fileName());
+        dev.close();
+        if (program.isNull()) {
+            qWarning() << Q_FUNC_INFO << "program is null";
+            continue;
+        }
+        d->shellPrograms.insert(fi.baseName(), program);
+    }
 }
 
 #if 0

@@ -29,9 +29,7 @@
 #include <btBulletDynamicsCommon.h>
 
 class QDir;
-//class QGestureEvent;
-//class QPinchGesture;
-//class QSwipeGesture;
+class QScriptEngine;
 
 class Camera;
 class ShaderProgram;
@@ -68,6 +66,8 @@ public:
 
     void loadSong (const QString& fileName);
 
+    QScriptEngine* scriptEngine () const;
+
 signals:
     void drawShells ();
     void drawClusters ();
@@ -81,6 +81,7 @@ private:
     void initPhysics ();
     void initSound ();
     void initGraphics ();
+    void initScripting ();
 
     //void resizeEvent (QResizeEvent* evt);
 
