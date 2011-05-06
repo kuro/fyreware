@@ -28,6 +28,8 @@
 #include "Shell.h"
 #include "FPSGraph.h"
 
+#include "scripting.h"
+
 #include <QGLWidget>
 #include <QTimer>
 #include <QCoreApplication>
@@ -127,6 +129,7 @@ struct Scene::Private
 
     QScriptEngine* scriptEngine;
     QHash<QString, QScriptProgram> shellPrograms;
+    QScriptProgram analyzerProgram;
 
     btDynamicsWorld* dynamicsWorld;
     btBroadphaseInterface* broadphaseInterface;
@@ -306,30 +309,45 @@ void Scene::initPhysics ()
     d->dynamicsWorld->setGravity(btVector3(0.f, -9.806f, 0.f));
 }
 
+static
+QScriptProgram readScript (const QString& fileName)
+{
+    qDebug() << "loading" << fileName;
+    QFile dev (fileName);
+    if (!dev.open(QIODevice::ReadOnly)) {
+        qWarning() << Q_FUNC_INFO << dev.errorString();
+        return QScriptProgram();
+    }
+    QScriptProgram program (dev.readAll(), dev.fileName());
+    dev.close();
+    return program;
+}
+
 void Scene::initScripting ()
 {
     sendStatusMessage("scripting...");
 
     QDir::addSearchPath("scripts", ".");
+    QDir::addSearchPath("scripts", "scripts");
+
+    // analyzer
+    d->analyzerProgram = readScript("scripts:default.analyzer");
+    if (d->analyzerProgram.isNull()) {
+        qFatal("failed to load default.analyzer");
+    }
+
+    // shells
     QDir dir ("scripts:");
     dir.setNameFilters(QStringList()<<"*.shell");
     QStringList shells (dir.entryList());
-    foreach (const QString& file, dir.entryList()) {
-        QFileInfo fi (file);
-        qDebug() << "loading shell" << fi.baseName();
-        QFile dev (file);
-        if (!dev.open(QIODevice::ReadOnly)) {
-            qWarning() << Q_FUNC_INFO << dev.errorString();
-            continue;
+    foreach (const QString& fileName, dir.entryList()) {
+        QScriptProgram program = readScript(fileName);
+        if (!program.isNull()) {
+            d->shellPrograms.insert(QFileInfo(fileName).baseName(), program);
         }
-        QScriptProgram program (dev.readAll(), dev.fileName());
-        dev.close();
-        if (program.isNull()) {
-            qWarning() << Q_FUNC_INFO << "program is null";
-            continue;
-        }
-        d->shellPrograms.insert(fi.baseName(), program);
     }
+
+    ::initScripting(d->scriptEngine);
 }
 
 #if 0
@@ -509,6 +527,9 @@ void Scene::analyzeSound ()
     if (!d->channel || d->channel->paused()) {
         return;
     }
+
+#if 0
+    // old way
     qreal sum[2];
     for (int chan = 0; chan < 2; chan++) {
         sum[chan] = 0.0;
@@ -519,6 +540,22 @@ void Scene::analyzeSound ()
     if (((1.0 / (sum[0] + sum[1])) * randf(1000)) < 1.0) {
         launch();
     }
+#else
+    // scripted analyzer
+    QScriptValue spectrumSv = d->scriptEngine->newArray(2);
+    QScriptValue spectrum0Sv = d->scriptEngine->newArray(d->spectrum[0].size());
+    QScriptValue spectrum1Sv = d->scriptEngine->newArray(d->spectrum[1].size());
+    spectrumSv.setProperty(0, spectrum0Sv);
+    spectrumSv.setProperty(1, spectrum1Sv);
+
+    for (int i = 0; i < d->spectrum[0].size(); i++) {
+        spectrum0Sv.setProperty(i, d->spectrum[0][i]);
+        spectrum1Sv.setProperty(i, d->spectrum[1][i]);
+    }
+    d->scriptEngine->globalObject().setProperty("spectrum", spectrumSv);
+
+    d->scriptEngine->evaluate(d->analyzerProgram);
+#endif
 }
 
 void Scene::launch ()

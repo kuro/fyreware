@@ -1,6 +1,9 @@
 set(source_files
     defs.h
     main.cpp
+    scripting.h
+    scripting.cpp
+
     Camera.h
     Camera.cpp
     Cluster.h

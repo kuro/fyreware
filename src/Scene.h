@@ -68,6 +68,8 @@ public:
 
     QScriptEngine* scriptEngine () const;
 
+    void launch ();
+
 signals:
     void drawShells ();
     void drawClusters ();
@@ -104,8 +106,6 @@ private:
 
     void checkTags ();
     void analyzeSound ();
-
-    void launch ();
 
     static void internalTickCallback (
         btDynamicsWorld* world, btScalar timeStep);
