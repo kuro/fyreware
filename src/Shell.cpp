@@ -15,6 +15,7 @@
 
 #include <QDebug>
 #include <QGLWidget>
+#include <QScriptProgram>
 
 struct Shell::Private
 {
@@ -117,13 +118,19 @@ void Shell::draw ()
 void Shell::update (qreal dt)
 {
     if (d->age >= d->lifetime) {
-        Cluster* cluster = new Cluster(d->trx.getOrigin(), scene);
-        connect(scene, SIGNAL(update(qreal)), cluster, SLOT(update(qreal)));
-        connect(scene, SIGNAL(drawClusters()), cluster, SLOT(draw()));
-
+        explode();
         scene->dynamicsWorld()->removeRigidBody(d->rigidBody);
         deleteLater();
     } else {
         d->age += dt;
     }
+}
+
+void Shell::explode ()
+{
+    QList<QScriptProgram> programs = scene->shellPrograms().values();
+    QScriptProgram shellProgram = programs[randi(programs.size())];
+    Cluster* cluster = new Cluster(d->trx.getOrigin(), shellProgram, scene);
+    connect(scene, SIGNAL(update(qreal)), cluster, SLOT(update(qreal)));
+    connect(scene, SIGNAL(drawClusters()), cluster, SLOT(draw()));
 }

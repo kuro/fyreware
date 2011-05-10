@@ -30,6 +30,7 @@
 
 class QDir;
 class QScriptEngine;
+class QScriptProgram;
 
 class Camera;
 class ShaderProgram;
@@ -69,6 +70,10 @@ public:
     QScriptEngine* scriptEngine () const;
 
     void launch ();
+
+    QVector<float>* spectrum () const;
+
+    QHash<QString, QScriptProgram> shellPrograms () const;
 
 signals:
     void drawShells ();

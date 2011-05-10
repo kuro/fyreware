@@ -26,6 +26,9 @@ public slots:
     void update (qreal dt);
 
 private:
+    void explode ();
+
+private:
     struct Private;
     QScopedPointer<Private> d;
 };

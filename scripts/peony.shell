@@ -1,0 +1,15 @@
+
+count = rand(1024, 2048)
+
+s = new Array()
+for (i = 0; i < count; i++) {
+    s.speed = rand(9.5, 10.5)
+    s.direction = vec3(
+        rand(-10, 10),
+        rand(-10, 10),
+        rand(-10, 10)
+        )
+    emit(s)
+}
+
+// vim: ft=javascript

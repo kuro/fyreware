@@ -7,6 +7,7 @@
 #include "Cluster.moc"
 
 #include "defs.h"
+#include "scripting.h"
 #include "Scene.h"
 #include "ShaderProgram.h"
 #include "Camera.h"
@@ -16,6 +17,7 @@
 #include <QVector>
 #include <QGLWidget>
 #include <QDebug>
+#include <QScriptEngine>
 
 #include <Cg/cgGL.h>
 
@@ -35,6 +37,8 @@ struct Cluster::Private
 
     QSharedPointer<QtFMOD::Channel> channel;
 
+    QScriptProgram& shellProgram;
+
     struct {
         CGparameter v0;
         CGparameter t;
@@ -43,19 +47,22 @@ struct Cluster::Private
         CGparameter eye;
     } shader;
 
-    Private (const btVector3& origin, Cluster* q) :
+    Private (const btVector3& origin, QScriptProgram& shellProgram,
+             Cluster* q) :
         origin(origin),
         lifetime(4),
         age(0.0),
+        shellProgram(shellProgram),
         starCount(0)
     {
         Q_UNUSED(q);
     }
 };
 
-Cluster::Cluster (const btVector3& origin, QObject* parent) :
+Cluster::Cluster (const btVector3& origin, QScriptProgram& shellProgram,
+                  QObject* parent) :
     QObject(parent),
-    d(new Private(origin, this))
+    d(new Private(origin, shellProgram, this))
 {
     setup();
 
@@ -89,23 +96,54 @@ Cluster::~Cluster ()
 {
 }
 
-void Cluster::setup ()
+/**
+ * Emit script function.
+ *
+ * Expects a struct with the following properties:
+ *   - direction
+ *   - speed
+ *
+ * The direction will be normalized automatically.
+ * The speed will be used to derive the (initial) velocity.
+ * This in turn will place a call to cluster->emitStar().
+ */
+static
+QScriptValue emitFun (QScriptContext* ctx, QScriptEngine* engine)
 {
-    for (int i = 0; i < 1024; i++) {
-        btVector3 direction (
-            randf(-10, 10),
-            randf(-10, 10),
-            randf(-10, 10)
-            );
-        direction = direction.normalize();
-        direction *= randf(9.5, 10.5);
-        emitStar(direction.x(), direction.y(), direction.z());
-    }
+    QVariant clusterVar = ctx->thisObject().property("self").toVariant();
+    Cluster* cluster = clusterVar.value<Cluster*>();
+    Q_ASSERT(cluster);
+
+    QScriptValue star = ctx->argument(0);
+
+    btVector3 dir (engine->fromScriptValue<btVector3>(
+            star.property("direction")));
+    qreal speed = star.property("speed").toNumber();
+
+    btVector3 vel = dir.normalized() * speed;
+    cluster->emitStar(vel);
+
+    return QScriptValue();
 }
 
-void Cluster::emitStar (qreal vx, qreal vy, qreal vz)
+void Cluster::setup ()
 {
-    btVector3 initialVelocity (vx, vy, vz);
+    QScriptEngine* engine = scene->scriptEngine();
+    QScriptContext* ctx = engine->pushContext();
+    QScriptValue ao = ctx->activationObject();
+    prepGlobalObject(ao);
+    ao.setProperty("emit", engine->newFunction(emitFun));
+
+    /// @todo is this the best way to get access to the cluster?
+    QVariant var = qVariantFromValue(this);
+    ao.setProperty("self", engine->newVariant(var));
+
+    engine->evaluate(d->shellProgram);
+    engine->popContext();
+}
+
+void Cluster::emitStar (btVector3 initialVelocity)
+{
     d->initialVelocities << initialVelocity;
     d->starCount++;
 }

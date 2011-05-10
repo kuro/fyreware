@@ -254,6 +254,18 @@ QWeakPointer<QtFMOD::Channel> Scene::streamChannel () const
     return d->channel;
 }
 
+
+QVector<float>* Scene::spectrum () const
+{
+    return d->spectrum;
+}
+
+
+QHash<QString, QScriptProgram> Scene::shellPrograms () const
+{
+    return d->shellPrograms;
+}
+
 void Scene::initSound ()
 {
     sendStatusMessage("sound...");
@@ -327,7 +339,6 @@ void Scene::initScripting ()
 {
     sendStatusMessage("scripting...");
 
-    QDir::addSearchPath("scripts", ".");
     QDir::addSearchPath("scripts", "scripts");
 
     // analyzer
@@ -340,14 +351,13 @@ void Scene::initScripting ()
     QDir dir ("scripts:");
     dir.setNameFilters(QStringList()<<"*.shell");
     QStringList shells (dir.entryList());
+    showit(shells);
     foreach (const QString& fileName, dir.entryList()) {
-        QScriptProgram program = readScript(fileName);
+        QScriptProgram program = readScript(dir.filePath(fileName));
         if (!program.isNull()) {
             d->shellPrograms.insert(QFileInfo(fileName).baseName(), program);
         }
     }
-
-    ::initScripting(d->scriptEngine);
 }
 
 #if 0
@@ -522,40 +532,27 @@ void Scene::checkTags ()
     }
 }
 
+static
+QScriptValue launchFun (QScriptContext* ctx, QScriptEngine* eng)
+{
+    scene->launch();
+    return QScriptValue();
+}
+
 void Scene::analyzeSound ()
 {
     if (!d->channel || d->channel->paused()) {
         return;
     }
 
-#if 0
-    // old way
-    qreal sum[2];
-    for (int chan = 0; chan < 2; chan++) {
-        sum[chan] = 0.0;
-        for (int i = 0; i < d->spectrum[chan].size(); i++) {
-            sum[chan] += d->spectrum[chan][i];
-        }
-    }
-    if (((1.0 / (sum[0] + sum[1])) * randf(1000)) < 1.0) {
-        launch();
-    }
-#else
     // scripted analyzer
-    QScriptValue spectrumSv = d->scriptEngine->newArray(2);
-    QScriptValue spectrum0Sv = d->scriptEngine->newArray(d->spectrum[0].size());
-    QScriptValue spectrum1Sv = d->scriptEngine->newArray(d->spectrum[1].size());
-    spectrumSv.setProperty(0, spectrum0Sv);
-    spectrumSv.setProperty(1, spectrum1Sv);
-
-    for (int i = 0; i < d->spectrum[0].size(); i++) {
-        spectrum0Sv.setProperty(i, d->spectrum[0][i]);
-        spectrum1Sv.setProperty(i, d->spectrum[1][i]);
-    }
-    d->scriptEngine->globalObject().setProperty("spectrum", spectrumSv);
-
+    QScriptContext* ctx = d->scriptEngine->pushContext();
+    QScriptValue ao = ctx->activationObject();
+    prepGlobalObject(ao);
+    ao.setProperty("launch", d->scriptEngine->newFunction(launchFun));
     d->scriptEngine->evaluate(d->analyzerProgram);
-#endif
+    d->scriptEngine->popContext();
+
 }
 
 void Scene::launch ()

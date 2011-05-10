@@ -6,6 +6,6 @@
 
 #pragma once
 
-class QScriptEngine;
+class QScriptValue;
 
-void initScripting (QScriptEngine* engine);
+void prepGlobalObject (QScriptValue& sv);

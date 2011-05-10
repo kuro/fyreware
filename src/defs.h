@@ -25,6 +25,7 @@
 #include <math.h>
 #include <QDebug>
 #include <LinearMath/btVector3.h>
+#include <QMetaType>
 
 /**
  * @warning the value of @a avg will be modified
@@ -78,3 +79,5 @@ QDebug operator<< (QDebug& d, const btVector3& v)
 }
 
 #define showit(v) qDebug().nospace() << #v << ": " << v
+
+Q_DECLARE_METATYPE(btVector3)
