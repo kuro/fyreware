@@ -19,6 +19,8 @@
  * @brief main implementation
  */
 
+#include <GL/glew.h>
+
 #include "Scene.h"
 #include "Playlist.h"
 #include "SoundEngine.h"
@@ -88,6 +90,8 @@ int main(int argc, char *argv[])
 
     QGLWidget* glWidget = new QGLWidget();
     glWidget->makeCurrent();
+
+    glewInit();
 
     Scene* scene = new Scene;
 

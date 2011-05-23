@@ -65,6 +65,7 @@ target_link_libraries(fyreware
     ${FMOD_LIBRARIES}
     ${QT_LIBRARIES}
     ${CG_LIBRARIES}
+    ${GLEW_LIBRARY}
     ${OPENGL_LIBRARIES}
     ${BULLET_LIBRARIES}
     )

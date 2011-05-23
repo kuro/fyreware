@@ -110,9 +110,14 @@ void OrbitalCamera::invoke ()
 
     Camera::invoke();
 
-    //qDebug("distance=%f altitude=%f azimuth=%f",
-           //d->distance, d->altitude, d->azimuth);
+#if 0
+    qDebug("distance=%f altitude=%f azimuth=%f",
+           d->distance, d->altitude, d->azimuth);
+    qDebug("position %f %f %f",
+           position().x(), position().y(), position().z());
+    qDebug("orientation %f %f %f %f",
+           orientation().w(), orientation().x(),
+           orientation().y(), orientation().z());
+#endif
 
-    //qDebug("position %f %f %f", position().x(), position().y(), position().z());
-    //qDebug("orientation %f %f %f %f", orientation().w(), orientation().x(), orientation().y(), orientation().z());
 }
