@@ -98,7 +98,7 @@ void GraphicsView::wheelEvent (QWheelEvent* evt)
     OrbitalCamera* ocam = qobject_cast<OrbitalCamera*>(::scene->camera());
     Q_ASSERT(ocam);
 
-#if Q_OS_MAC
+#ifdef Q_OS_MAC
 //    qreal delta;
 //    switch (evt->orientation()) {
 //    case Qt::Horizontal:

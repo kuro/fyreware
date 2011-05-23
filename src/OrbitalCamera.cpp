@@ -22,7 +22,7 @@ struct OrbitalCamera::Private
     Private (OrbitalCamera* q) :
         distance(200),
         altitude(half_pi),
-        azimuth(-half_pi),
+        azimuth(half_pi),
         focus(0.0, 0.0, 0.0),
         maxDistance(0.0)
     {
