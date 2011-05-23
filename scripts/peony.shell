@@ -1,4 +1,12 @@
 
+/**
+ * Peony
+ *
+ * A spherical break of colored stars that burn without a tail effect. The
+ * peony is the most commonly seen shell type.
+ */
+
+
 count = rand(1024, 2048)
 
 s = new Array()

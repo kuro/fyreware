@@ -1,0 +1,20 @@
+
+/**
+ * Ring
+ *
+ * A shell with stars specially arranged so as to create a ring. Variations
+ * include smiley faces, hearts, and clovers.
+ */
+
+count = 2048
+
+axis = vec3(rand(-1, 1), rand(-1, 1), rand(-1, 1))
+
+s = new Array()
+for (i = 0; i < count; i++) {
+    vr = vec3(rand(-1, 1), rand(-1, 1), rand(-1, 1))
+    s.direction = cross(axis, vr)
+
+    s.speed = rand(19.5, 20.5)
+    emit(s)
+}

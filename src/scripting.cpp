@@ -56,12 +56,44 @@ QScriptValue btVector3Ctor (QScriptContext* ctx, QScriptEngine* engine)
      return engine->toScriptValue(v);
  }
 
+static
+QScriptValue crossFun (QScriptContext* ctx, QScriptEngine* eng)
+{
+    if (ctx->argumentCount() != 2) {
+        qWarning() << Q_FUNC_INFO << "invalid argument count";
+        return QScriptValue();
+    }
+
+    btVector3 a (eng->fromScriptValue<btVector3>(ctx->argument(0)));
+    btVector3 b (eng->fromScriptValue<btVector3>(ctx->argument(1)));
+    btVector3 r (a.cross(b));
+
+    return eng->toScriptValue(r);
+}
+
+static
+QScriptValue addFun (QScriptContext* ctx, QScriptEngine* eng)
+{
+    if (ctx->argumentCount() != 2) {
+        qWarning() << Q_FUNC_INFO << "invalid argument count";
+        return QScriptValue();
+    }
+
+    btVector3 a (eng->fromScriptValue<btVector3>(ctx->argument(0)));
+    btVector3 b (eng->fromScriptValue<btVector3>(ctx->argument(1)));
+    btVector3 r (a + b);
+
+    return eng->toScriptValue(r);
+}
+
 
 void prepGlobalObject (QScriptValue& sv)
 {
     QScriptEngine* engine = scene->scriptEngine();
 
-    sv.setProperty("rand", engine->newFunction(randFun));
+    sv.setProperty("rand" , engine->newFunction(randFun ));
+    sv.setProperty("cross", engine->newFunction(crossFun));
+    sv.setProperty("add", engine->newFunction(addFun));
 
     // spectrum
     QScriptValue spectrumSv  = engine->newArray(2);
