@@ -22,6 +22,8 @@ set(source_files
     Shell.cpp
     Playlist.h
     Playlist.cpp
+    SoundEngine.h
+    SoundEngine.cpp
 
     ui/PlaylistWidget.h
     ui/PlaylistWidget.cpp

@@ -10,6 +10,7 @@
 #include "PlaylistWidget.moc"
 
 #include "Playlist.h"
+#include "SoundEngine.h"
 #include "defs.h"
 #include "PlaylistModel.h"
 #include "DirectoryScanner.h"
@@ -56,7 +57,7 @@ PlaylistWidget::PlaylistWidget (QWidget* parent) :
     connect(filterLineEdit, SIGNAL(textChanged(const QString&)),
             d->proxyModel, SLOT(setFilterWildcard(const QString&)));
 
-    connect(playlist, SIGNAL(inserted(int)),
+    connect(soundEngine->playlist(), SIGNAL(inserted(int)),
             SLOT(playlist_inserted(int)));
 }
 
@@ -71,7 +72,7 @@ void PlaylistWidget::update ()
     if (q.exec()) {
         while (q.next()) {
             QUrl url (q.value(0).toString());
-            playlist->insert(url);
+            soundEngine->playlist()->insert(url);
         }
     }
 

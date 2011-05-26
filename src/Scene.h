@@ -35,13 +35,6 @@ class QScriptProgram;
 class Camera;
 class ShaderProgram;
 
-namespace QtFMOD
-{
-class System;
-class Sound;
-class Channel;
-}
-
 class Scene : public QGraphicsScene
 {
     Q_OBJECT
@@ -59,20 +52,11 @@ public:
 
     qreal dt () const;
 
-    QtFMOD::System* soundSystem () const;
-    QSharedPointer<QtFMOD::Sound> sound (const QString& name) const;
-
-    QWeakPointer<QtFMOD::Sound> stream () const;
-    QWeakPointer<QtFMOD::Channel> streamChannel () const;
-
-    void loadSong (const QString& fileName);
-
     QScriptEngine* scriptEngine () const;
 
     void launch ();
 
-    QVector<float>* spectrum () const;
-
+    QScriptProgram analyzerProgram () const;
     QHash<QString, QScriptProgram> shellPrograms () const;
 
 signals:
@@ -105,9 +89,6 @@ private:
     //bool gestureEvent (QGestureEvent* evt);
     //void pinchGesture (QPinchGesture* gesture);
     //void swipeGesture (QSwipeGesture* gesture);
-
-    void checkTags ();
-    void analyzeSound ();
 
     static void internalTickCallback (
         btDynamicsWorld* world, btScalar timeStep);

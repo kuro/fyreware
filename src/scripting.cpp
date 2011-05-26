@@ -8,6 +8,7 @@
 
 #include "defs.h"
 #include "Scene.h"
+#include "SoundEngine.h"
 
 #include <QScriptEngine>
 
@@ -99,15 +100,27 @@ void prepGlobalObject (QScriptValue& sv)
 
     // spectrum
     QScriptValue spectrumSv  = engine->newArray(2);
-    QScriptValue spectrum0Sv = engine->newArray(scene->spectrum()[0].size());
-    QScriptValue spectrum1Sv = engine->newArray(scene->spectrum()[1].size());
+    QScriptValue spectrum0Sv = engine->newArray(soundEngine->spectrumLength());
+    QScriptValue spectrum1Sv = engine->newArray(soundEngine->spectrumLength());
     spectrumSv.setProperty(0, spectrum0Sv);
     spectrumSv.setProperty(1, spectrum1Sv);
 
-    for (int i = 0; i < scene->spectrum()[0].size(); i++) {
-        spectrum0Sv.setProperty(i, scene->spectrum()[0][i]);
-        spectrum1Sv.setProperty(i, scene->spectrum()[1][i]);
+#if 0
+    for (int i = 0; i < soundEngine->spectrumLength(); i++) {
+        spectrum0Sv.setProperty(i, soundEngine->spectrum(0)[i]);
+        spectrum1Sv.setProperty(i, soundEngine->spectrum(1)[i]);
     }
+#else
+    const float* array0 = soundEngine->spectrum(0).data();
+    const float* array1 = soundEngine->spectrum(1).data();
+    for (int i = 0; i < soundEngine->spectrumLength(); i++) {
+        spectrum0Sv.setProperty(i, *array0);
+        spectrum1Sv.setProperty(i, *array1);
+        array0++;
+        array1++;
+    }
+#endif
+
     sv.setProperty("spectrum", spectrumSv);
 
     // types

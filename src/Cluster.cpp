@@ -11,6 +11,7 @@
 #include "Scene.h"
 #include "ShaderProgram.h"
 #include "Camera.h"
+#include "SoundEngine.h"
 
 #include <QVector>
 #include <QGLWidget>
@@ -85,8 +86,8 @@ Cluster::Cluster (const btVector3& origin, QScriptProgram& shellProgram,
     d->color = colors[floor(randf(colors.size()))];
 
     // sound
-    scene->soundSystem()->playSound(
-        FMOD_CHANNEL_REUSE, scene->sound("explosion"), false, d->channel);
+    soundEngine->soundSystem()->playSound(
+        FMOD_CHANNEL_REUSE, soundEngine->sound("explosion"), false, d->channel);
     d->channel->set3DAttributes(d->origin);
 }
 

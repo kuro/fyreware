@@ -10,7 +10,9 @@
 #include <QPointer>
 #include <QUrl>
 
-class Playlist : public QObject
+#include "SortedSet.h"
+
+class Playlist : public QObject, public SortedSet<QUrl>
 {
     Q_OBJECT
 
@@ -18,15 +20,10 @@ public:
     Playlist (QObject* parent = NULL);
     virtual ~Playlist ();
 
-    int size () const;
-
-    QUrl at (int idx) const;
-
 public slots:
-    void playPause ();
-    void next ();
-    void prev ();
-
+    /**
+     * A sorted insert.
+     */
     void insert (QUrl url);
 
 signals:
@@ -40,5 +37,3 @@ private:
     struct Private;
     QScopedPointer<Private> d;
 };
-
-extern QPointer<Playlist> playlist;

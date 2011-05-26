@@ -9,6 +9,7 @@
 #include "PlaylistModel.moc"
 
 #include "Playlist.h"
+#include "SoundEngine.h"
 #include "Scene.h"
 #include "SortedSet.h"
 
@@ -91,7 +92,7 @@ QVariant PlaylistModel::headerData (int section, Qt::Orientation orientation,
 int PlaylistModel::rowCount (const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return playlist->size();
+    return soundEngine->playlist()->size();
 }
 
 int PlaylistModel::columnCount (const QModelIndex& parent) const
@@ -106,7 +107,7 @@ StreamInfo PlaylistModel::Private::fetchRow (int row)
 
     QSqlQuery q;
     q.prepare("select album, title, artist from streams where url = :url");
-    q.bindValue(":url", playlist->at(row).toString());
+    q.bindValue(":url", soundEngine->playlist()->at(row).toString());
     if (!q.exec() || !q.next()) {
         return info;
     }
@@ -139,7 +140,8 @@ QVariant PlaylistModel::data (const QModelIndex& index, int role) const
     if (row > d->tagsCache.lastIndex()) {
         if (row - d->tagsCache.lastIndex() > d->lookAhead) {
             d->cacheRows(row - d->halfLookAhead,
-                         qMin(playlist->size() - 1, row + d->halfLookAhead));
+                         qMin(soundEngine->playlist()->size() - 1,
+                              row + d->halfLookAhead));
         } else {
             while (row > d->tagsCache.lastIndex()) {
                 d->tagsCache.append(d->fetchRow(d->tagsCache.lastIndex()+1));

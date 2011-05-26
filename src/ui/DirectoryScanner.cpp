@@ -7,6 +7,7 @@
 #include "DirectoryScanner.moc"
 
 #include "defs.h"
+#include "../SoundEngine.h"
 #include "../Playlist.h"
 
 #include <QtFMOD/System.h>
@@ -64,7 +65,7 @@ DirectoryScanner::DirectoryScanner (const QString& path,
     d(new Private(path, dbToClone))
 {
     connect(this, SIGNAL(found(QUrl)),
-            playlist, SLOT(insert(QUrl)));
+            soundEngine->playlist(), SLOT(insert(QUrl)));
 }
 
 DirectoryScanner::~DirectoryScanner ()

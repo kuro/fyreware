@@ -21,6 +21,7 @@
 
 #include "Scene.h"
 #include "Playlist.h"
+#include "SoundEngine.h"
 
 #include "ui/ControlDialog.h"
 
@@ -81,9 +82,9 @@ int main(int argc, char *argv[])
     app.setOrganizationName("MentalDistortion");
     app.setApplicationName("FyreWare");
 
-    QApplication::setWindowIcon(makeFireIcon());
+    SoundEngine soundEngine;
 
-    Playlist playlist;
+    QApplication::setWindowIcon(makeFireIcon());
 
     QGLWidget* glWidget = new QGLWidget();
     glWidget->makeCurrent();
@@ -143,10 +144,6 @@ int main(int argc, char *argv[])
         qDebug() << item;
         item->setFlag(QGraphicsItem::ItemIsMovable);
         item->setCacheMode(QGraphicsItem::DeviceCoordinateCache);
-    }
-
-    if (app.arguments().size() > 1) {
-        scene->loadSong(app.arguments().last());
     }
 
     return app.exec();

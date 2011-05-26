@@ -23,6 +23,8 @@
 
 #include "Scene.moc"
 
+#include "SoundEngine.h"
+
 #include "ShaderProgram.h"
 #include "OrbitalCamera.h"
 #include "Shell.h"
@@ -43,39 +45,15 @@
 #include <QUrl>
 #include <QScriptEngine>
 
-#include <QtFMOD/System.h>
-#include <QtFMOD/Channel.h>
-#include <QtFMOD/Sound.h>
-
 #include <LinearMath/btVector3.h>
 
 #include <btBulletDynamicsCommon.h>
 
+#include <QtFMOD/System.h>
+
 #define SKY_TEX_MAX_WIDTH 1024
 
 #define SPECTRUM_HEIGHT 1
-#define SPECTRUM_GENERATIONS 8
-
-#define fsysCheck()                                                         \
-    do {                                                                    \
-        if (d->fsys->error() != FMOD_OK) {                                  \
-            qWarning() << Q_FUNC_INFO << __LINE__ << d->fsys->errorString();                           \
-        }                                                                   \
-    } while (0)
-
-#define channelCheck()                                                      \
-    do {                                                                    \
-        if (d->channel->error() != FMOD_OK) {                               \
-            qWarning() << d->channel->errorString();                        \
-        }                                                                   \
-    } while (0)
-
-#define soundCheck()                                                        \
-    do {                                                                    \
-        if (d->sound->error() != FMOD_OK) {                                 \
-            qWarning() << d->sound->errorString();                          \
-        }                                                                   \
-    } while (0)
 
 #define glCheck()                                                           \
     do {                                                                    \
@@ -98,16 +76,6 @@ QPointer<Scene> scene;
 struct Scene::Private
 {
     QTimer* timer;
-    QtFMOD::System* fsys;
-    QHash<QString, QSharedPointer<QtFMOD::Sound> > sounds;
-
-    QSharedPointer<QtFMOD::Channel> channel;
-    QSharedPointer<QtFMOD::Sound> sound;
-
-    int spectrumLength;
-    FMOD_DSP_FFT_WINDOW spectrumWindowType;
-    QVector<float> spectrumNew[2];      ///< values before smoothing
-    QVector<float> spectrum[2];         ///< values after smoothing
 
     GLuint cubeMapTex;
     GLuint starTex;
@@ -136,9 +104,6 @@ struct Scene::Private
 
     Private (Scene* q) :
         timer(new QTimer(q)),
-        fsys(new QtFMOD::System(q)),
-        spectrumLength(256),
-        spectrumWindowType(FMOD_DSP_FFT_WINDOW_RECT),
         cubeMapTex(0),
         starTex(0),
         camera(new OrbitalCamera(q)),
@@ -156,12 +121,6 @@ struct Scene::Private
         dispatcher(NULL)
     {
         timer->setObjectName("timer");
-        fsys->setObjectName("fsys");
-
-        spectrumNew[0].resize(spectrumLength);
-        spectrumNew[1].resize(spectrumLength);
-        spectrum[0].resize(spectrumLength);
-        spectrum[1].resize(spectrumLength);
 
         shaders.insert("sky", skyShader);
         shaders.insert("debugNormals", debugNormalsShader);
@@ -186,8 +145,6 @@ Scene::~Scene ()
 void Scene::start ()
 {
     sendStatusMessage("initializing...");
-
-    connect(d->timer, SIGNAL(timeout()), d->fsys, SLOT(update()));
 
     initSound();
     initPhysics();
@@ -230,33 +187,6 @@ QScriptEngine* Scene::scriptEngine () const
     return d->scriptEngine;
 }
 
-QtFMOD::System* Scene::soundSystem () const
-{
-    return d->fsys;
-}
-
-QSharedPointer<QtFMOD::Sound> Scene::sound (const QString& name) const
-{
-    return d->sounds[name];
-}
-
-QWeakPointer<QtFMOD::Sound> Scene::stream () const
-{
-    return d->sound;
-}
-
-QWeakPointer<QtFMOD::Channel> Scene::streamChannel () const
-{
-    return d->channel;
-}
-
-
-QVector<float>* Scene::spectrum () const
-{
-    return d->spectrum;
-}
-
-
 QHash<QString, QScriptProgram> Scene::shellPrograms () const
 {
     return d->shellPrograms;
@@ -266,26 +196,8 @@ void Scene::initSound ()
 {
     sendStatusMessage("sound...");
 
-#ifdef Q_OS_LINUX
-    d->fsys->setOutput(FMOD_OUTPUTTYPE_ALSA);
-#endif
-
-    fsysCheck();
-
-    // init sound system
-    d->fsys->init(32);
-    fsysCheck();
-
-    d->fsys->set3DNumListeners(1);
-    d->fsys->set3DSettings(1.0f, 1.0f, 0.3f);
-
-    // sound effects
-    QSharedPointer<QtFMOD::Sound> sound (
-        d->fsys->createSound(":media/sfx/explosion0.oga", FMOD_3D)
-        );
-    fsysCheck();
-    d->sounds.insert("explosion", sound);
-    sound->set3DMinMaxDistance(150, 600);
+    Q_ASSERT(soundEngine);
+    soundEngine->initialize();
 }
 
 void Scene::initPhysics ()
@@ -329,6 +241,11 @@ QScriptProgram readScript (const QString& fileName)
     QScriptProgram program (dev.readAll(), dev.fileName());
     dev.close();
     return program;
+}
+
+QScriptProgram Scene::analyzerProgram () const
+{
+    return d->analyzerProgram;
 }
 
 void Scene::initScripting ()
@@ -465,11 +382,13 @@ void Scene::drawBackground (QPainter* painter, const QRectF&)
 
 void Scene::draw ()
 {
+    Q_ASSERT(soundEngine);
+
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     d->camera->invoke();
-    d->fsys->set3DListenerAttributes(
+    soundEngine->soundSystem()->set3DListenerAttributes(
         0,
         d->camera->position(),
         d->camera->velocity(),
@@ -486,72 +405,6 @@ void Scene::draw ()
     glCheck();
 }
 
-void Scene::loadSong (const QString& fileName)
-{
-    d->sound = QSharedPointer<QtFMOD::Sound>(d->fsys->createStream(fileName));
-    fsysCheck();
-    Q_ASSERT(d->sound);
-
-    d->fsys->playSound(FMOD_CHANNEL_REUSE, d->sound, false, d->channel);
-    fsysCheck();
-    Q_ASSERT(d->channel);
-}
-
-void Scene::checkTags ()
-{
-    if (!d->sound) {
-        return;
-    }
-    int nbUpdated;
-    QHash<QString, QtFMOD::Tag> tags (d->sound->tags(&nbUpdated));
-    if (nbUpdated > 0) {
-        if (tags.contains("TITLE")) {
-            QString title (tr("%0 / %1 - FyreWare"));
-            title = title.arg(tags["ARTIST"].value().toString());
-            title = title.arg(tags["TITLE"].value().toString());
-            //setWindowTitle(title);
-        }
-        qDebug();
-    }
-    QHashIterator<QString, QtFMOD::Tag> tagIter (tags);
-    while (tagIter.hasNext()) {
-        tagIter.next();
-        QtFMOD::Tag tag (tagIter.value());
-        if (tag.updated()) {
-            qDebug().nospace()
-                << qPrintable(tagIter.key()) << ": "
-                << qPrintable(tag.value().toString());
-            if (tag.name() == "APIC") {
-                //setWindowIcon(QPixmap::fromImage(tag.toImage()));
-            }
-        }
-    }
-}
-
-static
-QScriptValue launchFun (QScriptContext* ctx, QScriptEngine* eng)
-{
-    Q_UNUSED(ctx);
-    Q_UNUSED(eng);
-    scene->launch();
-    return QScriptValue();
-}
-
-void Scene::analyzeSound ()
-{
-    if (!d->channel || d->channel->paused()) {
-        return;
-    }
-
-    // scripted analyzer
-    QScriptContext* ctx = d->scriptEngine->pushContext();
-    QScriptValue ao = ctx->activationObject();
-    prepGlobalObject(ao);
-    ao.setProperty("launch", d->scriptEngine->newFunction(launchFun));
-    d->scriptEngine->evaluate(d->analyzerProgram);
-    d->scriptEngine->popContext();
-
-}
 
 void Scene::launch ()
 {
@@ -571,9 +424,6 @@ void Scene::on_timer_timeout ()
         widget->setWindowTitle(tr("FyreWare (%0 fps)").arg(int(1.0/d->dt)));
     }
 
-    checkTags();
-    analyzeSound();
-
     // calling stepSimulation eventually leads to internalTickCallback,
     // which eventually emits update signal
     if (d->dynamicsWorld) {
@@ -586,46 +436,31 @@ void Scene::on_timer_timeout ()
 
 void Scene::drawSpectrum ()
 {
-    if (!d->channel) {
+    if (!soundEngine->isPlaying()) {
         return;
-    }
-    if (!d->channel->isPlaying()) {
-        return;
-    }
-
-    d->channel->spectrum(d->spectrumNew[0], 0, d->spectrumWindowType);
-    d->channel->spectrum(d->spectrumNew[1], 1, d->spectrumWindowType);
-
-    for (int i = 0; i < d->spectrumLength; i++) {
-        expMovAvg(d->spectrum[0][i],
-                  d->spectrumNew[0][i],
-                  d->spectrumNew[0][i] > d->spectrum[0][i]
-                  ? 1.5 : SPECTRUM_GENERATIONS);
-        expMovAvg(d->spectrum[1][i],
-                  d->spectrumNew[1][i],
-                  d->spectrumNew[1][i] > d->spectrum[1][i]
-                  ? 1.5 : SPECTRUM_GENERATIONS);
     }
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, d->spectrumLength * 2, 0, SPECTRUM_HEIGHT, -1, 1);
+    glOrtho(0, soundEngine->spectrumLength() * 2, 0, SPECTRUM_HEIGHT, -1, 1);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
     glColor3f(0, 1, 1);
     glBegin(GL_LINE_STRIP);
-    for (int i = 0; i < d->spectrumLength; i++) {
-        glVertex2f(i, d->spectrum[0][i]);
+    for (int i = 0; i < soundEngine->spectrumLength(); i++) {
+        glVertex2f(i,
+                   soundEngine->spectrum(0)[i]);
     }
     glEnd();
 
     glColor3f(1, 0, 0);
     glBegin(GL_LINE_STRIP);
-    for (int i = 0; i < d->spectrumLength; i++) {
+    for (int i = 0; i < soundEngine->spectrumLength(); i++) {
         /// @todo perfect horizontal alignment
-        glVertex2f(d->spectrumLength * 2 - i - 1, d->spectrum[1][i]);
+        glVertex2f(soundEngine->spectrumLength() * 2 - i - 1,
+                   soundEngine->spectrum(1)[i]);
     }
     glEnd();
 

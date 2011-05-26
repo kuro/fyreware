@@ -9,7 +9,7 @@
 #include "Player.moc"
 
 #include "../Playlist.h"
-#include "Scene.h"
+#include "../SoundEngine.h"
 #include "PlaylistWidget.h"
 
 #include <QtFMOD/Channel.h>
@@ -66,12 +66,9 @@ Player::Player (QWidget* parent) :
 
     startTimer(100);
 
-    connect(prevButton, SIGNAL(pressed()),
-            playlist, SLOT(prev()));
-    connect(nextButton, SIGNAL(pressed()),
-            playlist, SLOT(next()));
-    connect(playButton, SIGNAL(pressed()),
-            playlist, SLOT(playPause()));
+    connect(prevButton, SIGNAL(pressed()), soundEngine, SLOT(prev()));
+    connect(nextButton, SIGNAL(pressed()), soundEngine, SLOT(next()));
+    connect(playButton, SIGNAL(pressed()), soundEngine, SLOT(play()));
 }
 
 Player::~Player ()
@@ -102,8 +99,8 @@ void Player::timerEvent (QTimerEvent* evt)
 {
     Q_UNUSED(evt);
 
-    QSharedPointer<Sound> stream (scene->stream());
-    QSharedPointer<Channel> channel (scene->streamChannel());
+    QSharedPointer<Sound> stream (soundEngine->stream());
+    QSharedPointer<Channel> channel (soundEngine->streamChannel());
 
     if (!channel || !stream) {
         timeSlider->setValue(0);
@@ -148,7 +145,7 @@ void Player::timerEvent (QTimerEvent* evt)
 
 void Player::on_timeSlider_sliderMoved (int value)
 {
-    QSharedPointer<Channel> channel (scene->streamChannel());
+    QSharedPointer<Channel> channel (soundEngine->streamChannel());
     if (channel) {
         channel->setPosition(value, FMOD_TIMEUNIT_MS);
     }
@@ -156,7 +153,7 @@ void Player::on_timeSlider_sliderMoved (int value)
 
 void Player::on_volumeSlider_sliderMoved (int value)
 {
-    QSharedPointer<Channel> channel (scene->streamChannel());
+    QSharedPointer<Channel> channel (soundEngine->streamChannel());
     if (channel) {
         channel->setVolume(value / 100.0);
     }

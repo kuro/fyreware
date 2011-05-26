@@ -61,4 +61,10 @@ public:
     {
         return map.keys();
     }
+
+    inline
+    const T& at (int idx) const
+    {
+        return map.keys().at(idx);
+    }
 };
